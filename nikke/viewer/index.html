@@ -1871,9 +1871,19 @@ function toggleFav(id){
   // 同步所有同名星标
   document.querySelectorAll(`.fav-star[data-fid="${id}"]`).forEach(el =>
     el.classList.toggle('on', favorites.has(id)));
+  // 徽标即时更新（审核报的 P3：非收藏分类下点星时徽标不刷新，
+  // 因为原先只在 buildGrid 的 reset() 里写。这里独立更新，不依赖分类）。
+  updateFavBadge();
   // 若正在收藏分类且取消了收藏，刷新列表
   if(ui.cat === 'fav' && typeof refreshGrid === 'function') refreshGrid();
   return favorites.has(id);
+}
+
+/** 收藏 tab 的计数徽标（独立于 buildGrid，任何分类下都即时反映） */
+function updateFavBadge(){
+  const btn = document.getElementById('nav-fav');
+  if(!btn) return;
+  btn.textContent = favorites.size ? `⭐ 收藏 (${favorites.size})` : '⭐ 收藏';
 }
 
 function applyFilters(){
@@ -1930,9 +1940,8 @@ function buildGrid(){
       append();
     }
     document.getElementById('count').textContent = `${filtered.length} ${CAT_NOUN[ui.cat]||'条目'}`;
-    // 收藏数徽标
-    const favBtn = document.getElementById('nav-fav');
-    if(favBtn) favBtn.textContent = favorites.size ? `⭐ 收藏 (${favorites.size})` : '⭐ 收藏';
+    // 收藏数徽标（与 toggleFav 里的 updateFavBadge 同一实现）
+    updateFavBadge();
   };
   refreshGrid = reset;   // 供 toggleFav 在收藏分类下刷新
   new IntersectionObserver(e=>{ if(e[0].isIntersecting && shown<filtered.length) append(); },{rootMargin:'400px'})
