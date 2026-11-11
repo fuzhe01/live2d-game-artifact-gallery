@@ -141,21 +141,26 @@ def extract_meta(bundle_bytes):
 
     # ═══ 用 skel 字节验证动画名 ═══════════════════════════════════
     #
-    # ⚠️ 重要结论修正（2026-11-11 全量实测）：
+    # ⚠️ 重要结论（2026-11-11 全量实测 + 审核独立复验）：
     #   `eachAnimationStartIndexKeys` 返回的动画名列表是【完全正确】的。
     #   全量 749 个 meta 用 UnityPy 解码字节校验，0 个含不存在的名字。
     #
     #   曾被误判为"幽灵"的 talk_a / talk_close / talk_i / talk_u，
     #   实际上全部真实存在于 skel 中，且带合法的 varint(len+1) 前缀。
     #
-    #   误判的根源是【验证方法错了】：
-    #     .skel 文件里有 8 字节加密头，与 UnityPy 解码出的字节不一致。
-    #     c010: 文件 930074 B  vs  Unity 933413 B（差 3339 B）
-    #     c017: 文件 = Unity（恰好没加密）
-    #   直接 open('.skel').read() 再 find(名字) 会在加密过的文件上失败，
-    #   从而把真实动画误报为"幽灵"。
+    #   误判根源：磁盘上的 `.skel` 文件与 bundle 内的 TextAsset 字节
+    #   是【两套不同的序列化结果】，不是简单的加密头差异：
+    #     c010: 磁盘 930,074 B（头 41 53 36 f7…）
+    #           bundle 933,413 B（头 e7 9b 55 26…）   公共前缀 = 0
+    #     c080: 磁盘 499,372 B vs bundle 506,724 B       公共前缀 = 0
+    #     c017: 磁盘 2,837,539 B == bundle 2,837,539 B   完全一致
+    #     c521: 磁盘 3,261,299 B == bundle 3,261,299 B   完全一致
+    #   common_prefix=0 说明是 Unity 导入器【重新写出】的，
+    #   像 talk_a 这种在小尺寸动画，在磁盘文件里连近似位置都没有。
+    #   → 不能用「按偏移裁剪」的方式从 raw 还原 disk，只能靠 runtime 语义。
+    #   c017/c521 恰好一致，所以用它验证会"通过"——这是最坑的地方。
     #
-    #   本段校验保留作为防御（万一将来某个版本真的出现名池与实体不一致），
+    #   本段校验保留作为防御（只有 raw 字节，不是磁盘字节），
     #   判据：名字必须以 varint(len+1) 前缀形式出现在 skel 字节中，
     #   且要扫描【所有】出现位置（strings 池里可能有同名 entry 干扰）。
     verified = []
@@ -223,9 +228,10 @@ def extract_meta(bundle_bytes):
         #        需要「确认能否 setAnimation」时应查 runtime 的 skeletonData.animations。
         'animations_note': 'design-time list from skeletonBinaryMetadata; '
                            'runtime skeletonData.animations may be fewer',
+        # 总是写入（0 幽灵时是空数组），让「无幽灵」可以自证。
+        # 审核指出：只在非空时写会导致该字段永不存在，无法从 meta 侧验证。
+        '_dropped_animations': dropped,
     }
     if dropped:
-        # 留痕：原始列表里有、但 skel 字节验证不存在的名字
-        result['_dropped_animations'] = dropped
         result['_raw_animation_count'] = len(verified) + len(dropped)
     return result
