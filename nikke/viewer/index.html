@@ -772,7 +772,10 @@
 
   /* 旋转 / 镜像面板（§6.5） */
   .tf-panel{
-    position:absolute; bottom:12.5rem; left:15.5rem; z-index:21;
+    /* left 16.8rem：sp-panel 左边界 1.4rem + 宽 230px = 右边界约 252px，
+       tf-panel 若从 15.5rem(248px) 起会与 sp-panel 重叠 4px。
+       实测 16.8rem(268.8px) 起可完全避开，且窗口 ≥1200px 时仍在视口内。 */
+    position:absolute; bottom:12.5rem; left:16.8rem; z-index:21;
     width:min(210px,calc(100vw - 2.8rem));
     display:none; flex-direction:column;
     background:rgba(26,13,20,.96); border:1px solid var(--line-lit);
