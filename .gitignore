@@ -23,3 +23,7 @@ __pycache__/
 Thumbs.db
 .DS_Store
 /nikke/raw/
+
+# 本地备份与临时文件（不进版本库）
+nikke/backup/
+*.bak-*

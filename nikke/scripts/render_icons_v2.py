@@ -95,16 +95,27 @@ def save_icon(cid, data_url):
         return None, '全透明'
     im = im.crop(bbox)
     w, h = im.size
-    scale = min(ICON_W / w, ICON_H / h)
-    nw, nh = max(1, int(w * scale)), max(1, int(h * scale))
-    im2 = im.resize((nw, nh), Image.LANCZOS)
+
+    # ⚠️ 缩放策略：高度优先（保证列表里所有角色立绘高度一致）。
+    # 旧逻辑 scale = min(256/w, 512/h) 是「等比塞进框内」，
+    # 宽图会被宽度限制 → 高度只占 30~50%，列表里高低不齐（实测 31%~100%）。
+    # 新逻辑：先按目标高度缩，若宽度超出画布则改按宽度缩（极少数宽构图角色）。
+    TARGET_H = int(ICON_H * 0.96)          # 内容高度占画布 96%
+    scale = TARGET_H / h
+    nw, nh = int(w * scale), int(h * scale)
+    if nw > ICON_W:
+        # 太宽，按宽度约束（会牺牲一点高度，但避免横向裁切）
+        scale = ICON_W / w
+        nw, nh = int(w * scale), int(h * scale)
+
+    im2 = im.resize((max(1, nw), max(1, nh)), Image.LANCZOS)
     canvas = Image.new('RGBA', (ICON_W, ICON_H), (0, 0, 0, 0))
     canvas.paste(im2, ((ICON_W - nw) // 2, (ICON_H - nh) // 2), im2)
     out_dir = os.path.join(C.DATA_DIR, cid)
     os.makedirs(out_dir, exist_ok=True)
     dst = os.path.join(out_dir, '_icon.png')
     canvas.save(dst, 'PNG')
-    return dst, '%dx%d→%dx%d' % (w, h, nw, nh)
+    return dst, '%dx%d→%dx%d (高占%.0f%%)' % (w, h, nw, nh, nh / ICON_H * 100)
 
 
 async def run(targets):
@@ -114,7 +125,11 @@ async def run(targets):
         b = await p.chromium.launch(executable_path=CHROMIUM, headless=True,
                                     args=['--no-sandbox', '--enable-webgl',
                                           '--use-gl=swiftshader'])
-        pg = await b.new_page(viewport={'width': 1400, 'height': 1000})
+            # ⚠️ 视口必须用竖版 1:2：spine-player 按容器尺寸自适应缩放，
+            # 横版视口会让角色「横向铺开」（实测 c140 fillW=54%、fillH=83%），
+            # 再塞进 1:2 的 256×512 就只剩 46% 高，列表里高低不齐。
+            # 用 512×1024（1:2）让角色自然占满竖向。
+        pg = await b.new_page(viewport={'width': 512, 'height': 1024})
         errs = []
         pg.on('pageerror', lambda e: errs.append(str(e)[:120]))
         await pg.goto(VIEWER, wait_until='networkidle', timeout=60000)

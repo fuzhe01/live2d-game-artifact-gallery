@@ -53,7 +53,11 @@
   .search::placeholder{color:var(--foam); opacity:.5}
 
   #grid-view{padding:1.9rem var(--page-x) 2.6rem}
-  .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:1rem}
+  /* 网格列宽：minmax(175px, 1fr)。
+     ⚠️ 曾经试过 118px（一行 11 个），立绘太小、观感差。
+     175px 在 1500px 视口下正好 7 个/行（与最初密度一致），
+     且缩略图容器为 aspect-ratio:1/2，图片能占满 95% 不溢出。 */
+  .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(175px,1fr)); gap:1rem}
   .card{
     background:linear-gradient(180deg,rgba(42,22,32,.5),rgba(30,15,22,.3)),
       repeating-conic-gradient(#1b0e15 0% 25%,#241119 0% 50%) 50%/22px 22px;
@@ -61,9 +65,20 @@
     cursor:pointer; transition:.2s; position:relative;
   }
   .card:hover{border-color:var(--accent); transform:translateY(-3px)}
-  .card .thumb{height:230px; display:grid; place-items:center; padding:.6rem; position:relative}
-  .card img{max-width:100%; max-height:100%; object-fit:contain;
-    filter:drop-shadow(0 10px 18px rgba(0,0,0,.4))}
+  /* 缩略图容器：宽度撑满 + 高度按 1:2 竖版比例自适应。
+     ⚠️ 原实现 height:230px 固定，宽度随 grid 变化，比例不固定。
+     现在图标统一 256×512（1:2），容器也用 aspect-ratio:1/2 才不会留白。
+     （宽构图角色如骑摩托车的 Sugar 会按 contain 显示，仍居中不裁切。） */
+  .card .thumb{
+    aspect-ratio:1 / 2; width:100%;
+    display:flex; align-items:center; justify-content:center;
+    padding:.35rem; position:relative; min-height:0; overflow:hidden;
+  }
+  .card img{
+    max-width:100%; max-height:100%; width:auto; height:auto;
+    object-fit:contain; display:block; min-height:0;
+    filter:drop-shadow(0 10px 18px rgba(0,0,0,.4));
+  }
   .card .name{
     font-family:var(--mono); font-size:.72rem; letter-spacing:.06em; color:var(--foam);
     padding:.6rem .7rem; border-top:1px solid var(--line);
@@ -1933,9 +1948,24 @@ function applyFilters(){
     items = items.filter(c => c.name.toLowerCase().includes(q) || c.id.toLowerCase().includes(q));
   }
   items = items.slice();
-  if(ui.sort === 'name') items.sort((a,b)=>a.name.localeCompare(b.name));
-  else if(ui.sort === 'poses') items.sort((a,b)=>Object.keys(b.poses).length-Object.keys(a.poses).length);
-  else items.sort((a,b)=>a.id.localeCompare(b.id));
+  // 分类优先级：角色 > 活动 > 剧情 > 其它。
+  // ⚠️ 默认排序原来只按 id 字母序，导致 777 / bluewaterisland / bowwowparadise
+  // 这类活动 key（数字和小写字母开头）排在 c010 等角色立绘【前面】，
+  // 用户看到的就是「三张长镜头插在角色列表最前面」。
+  const CAT_RANK = { character: 0, event: 1, story: 2, misc: 3 };
+  const catRank = c => (CAT_RANK[c.category] ?? 9);
+  if(ui.sort === 'name') items.sort((a,b)=>{
+    const d = catRank(a) - catRank(b);
+    return d !== 0 ? d : a.name.localeCompare(b.name);
+  });
+  else if(ui.sort === 'poses') items.sort((a,b)=>{
+    const d = catRank(a) - catRank(b);
+    return d !== 0 ? d : Object.keys(b.poses).length-Object.keys(a.poses).length;
+  });
+  else items.sort((a,b)=>{
+    const d = catRank(a) - catRank(b);
+    return d !== 0 ? d : a.id.localeCompare(b.id);
+  });
   return items;
 }
 

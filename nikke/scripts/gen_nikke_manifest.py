@@ -143,16 +143,21 @@ def categorize(cid):
 
     character : 角色（c### / c###_皮肤）
     event     : 活动剧情立绘（eventscene*）
-    story     : 主线过场/剧情（chapter*/mvg*/*glass*/*chap*/liberation*/timeline*）
-    misc      : 其它（BB / 道具 / 未归类）
+    story     : 主线过场/剧情（story*/chapter*/mvg*/*glass*/*chap*/liberation*/timeline*）
+    misc      : 其它（活动 key / Q版 / mini / 未归类）
     """
     i = cid.lower()
     if re.match(r"^c\d{3}(_\d+)?$", i):
         return "character"
     if i.startswith("eventscene"):
         return "event"
-    if (i.startswith("chapter") or i.startswith("mvg") or i.startswith("liberation")
-            or i.startswith("timeline") or "glass" in i or "chap" in i or "anarchyorr" in i):
+    # ⚠️ 必须包含 story 前缀：data 里有 23 个 story0001/story2202 条目，
+    # 旧规则只判 chapter/mvg/liberation/timeline/glass/chap，
+    # 导致它们全落到 misc，「剧情」标签页永远为空。
+    if (i.startswith("story") or i.startswith("chapter")
+            or i.startswith("mvg") or i.startswith("liberation")
+            or i.startswith("timeline") or "glass" in i or "chap" in i
+            or "anarchyorr" in i):
         return "story"
     return "misc"
 
