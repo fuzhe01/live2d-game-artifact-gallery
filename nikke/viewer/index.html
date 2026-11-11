@@ -239,7 +239,13 @@
   .ia-status{
     font-family:var(--mono); font-size:.66rem; color:var(--foam);
     letter-spacing:.03em; opacity:.85; margin-left:.3rem;
-    max-width:18rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    /* ⚠️ 必须限宽且不收缩到撑破单行：状态文字变长（如「播放速度 0.1x」）
+       会让 .interact-bar 因 flex-wrap:wrap 多出一行，高度 81→102px，
+       top 上移到 825，正好压住底部浮层（.sp-preset 在 814~835）。
+       实测这会让速度预设按钮 5/6 档点不到。
+       这里用 flex-basis 固定 + flex-shrink:0 保证永远单行、宽度可控。 */
+    max-width:11rem; flex:0 0 auto;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   }
   @media(max-width:720px){
     .interact-bar{left:.6rem; right:.6rem; bottom:4rem; max-width:none}
@@ -689,7 +695,7 @@
 
   /* 播放速度面板（§6.6） */
   .sp-panel{
-    position:absolute; bottom:9.6rem; left:1.4rem; z-index:16;
+    position:absolute; bottom:12.5rem; left:1.4rem; z-index:21;
     width:min(230px,calc(100vw - 2.8rem));
     display:none; flex-direction:column;
     background:rgba(26,13,20,.96); border:1px solid var(--line-lit);
@@ -721,7 +727,7 @@
 
   /* 截图面板（§7） */
   .shot-panel{
-    position:absolute; bottom:9.6rem; right:1.4rem; z-index:16;
+    position:absolute; bottom:12.5rem; right:1.4rem; z-index:21;
     width:min(230px,calc(100vw - 2.8rem));
     display:none; flex-direction:column;
     background:rgba(26,13,20,.96); border:1px solid var(--line-lit);
@@ -766,7 +772,7 @@
 
   /* 旋转 / 镜像面板（§6.5） */
   .tf-panel{
-    position:absolute; bottom:9.6rem; left:15.5rem; z-index:16;
+    position:absolute; bottom:12.5rem; left:15.5rem; z-index:21;
     width:min(210px,calc(100vw - 2.8rem));
     display:none; flex-direction:column;
     background:rgba(26,13,20,.96); border:1px solid var(--line-lit);
