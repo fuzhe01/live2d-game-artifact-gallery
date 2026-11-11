@@ -13,9 +13,58 @@
 
 **NIKKE（胜利女神）现状**：
 - **立绘 / 模型**：Spine 骨骼动画，支持 **立绘(fb) / 半身(cover) / 瞄准(aim)** 三种姿态
+- **规模**：697 个条目（526 角色 + 112 活动 + 59 其它），1440 个 meta（13,460 个动画）
+- **互动**：点击角色触发触摸台词（2303 条反应 / 2347 个动画变体 / 2295 个语音 WAV）
 - 查看器自动识别 **Spine 4.0 / 4.1** 版本并加载对应 runtime（EsotericSoftware 官方 spine-player），
   正确处理预乘 alpha（premultipliedAlpha），透明背景，自带动作切换/播放控件
-- 数据来源：社区 [`Nikke-db`](https://github.com/Nikke-db/Nikke-db.github.io) 已解包的 Spine 资源
+- 数据来源：**两条路** —— (A) 社区 `Nikke-db` 已解包成品；(B) **从本地客户端
+  `store.cdb` 直接解包（推荐，数据最新最全，无需网络）**
+
+### NIKKE 本地解包管线（推荐）
+
+新版客户端把资源放在 `<客户端>/com.shiftup.patch/<pak>/chunk/store.cdb`，可直接解：
+
+```bash
+cd nikke/scripts
+
+# 1. 提取 Spine（fb/cover/aim）
+python extract_cdb.py --pak dp            # 角色
+python extract_cdb.py --pak core          # 活动剧情
+
+# 2. 提取元数据（动画清单 + 音效时间轴）
+python extract_meta.py --pak dp
+python extract_meta.py --pak core --with-prefab
+
+# 3. 互动映射 + 语音
+python index_ja_audio.py                  # 索引 142,701 个 AudioClip（约 30 秒）
+python build_reactions.py                 # 生成 reactions.json
+python export_voice.py                    # 导出互动语音 WAV
+
+# 4. 刷新查看器
+python gen_nikke_manifest.py
+```
+
+**格式破译要点**（详见 `nikke/DATASOURCE.md` 与 `nikke/NKAB_ENCRYPTION.md`）：
+
+| 层 | 格式 | 关键机制 |
+|---|---|---|
+| `catalog.ndb` | `NKDB` | **AES 密钥明文存在文件头**（16B）→ 分段 AES-OFB + zlib → SQLite |
+| `store.cdb.idx` | `CIDX` | 28B/条：`[16B md5][u32 偏移][u32 保留][u32 压缩大小]` |
+| `store.cdb` | `CBLB` | 数据区 = 连续 zstd 帧，**无加密** |
+| 解压产物 | `UnityFS` | 明文 Unity 包 → UnityPy 直接解析 |
+
+⚠️ **最容易踩的坑**：`CIDX` 的偏移是 **uint32**，超过 4 GB 会回绕。
+真实偏移 = `段号 × 2³² + 记录值`（段号按偏移递减次数累加）。
+不修正则 pak 5 之后全部读错。
+
+### NIKKE 从 Nikke-db 拉取（备选）
+
+```bash
+cd nikke/scripts
+python fetch_nikke.py                 # 全部角色
+python fetch_nikke.py --scan-existing --only-missing   # 补漏
+python gen_nikke_manifest.py
+```
 
 ---
 

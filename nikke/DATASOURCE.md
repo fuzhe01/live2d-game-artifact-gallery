@@ -177,7 +177,49 @@ python gen_nikke_manifest.py          # 再生成 manifest
 
 ---
 
-## 五、版权说明
+## 五、已知边界
+
+以下三点是实测确认的**数据或行为边界**，不是提取缺陷：
+
+**1. c530 无互动语音**
+
+`data/c530/` 的 Spine 资源完整（19 个动画），但 `data/voice/c530_*.wav`
+全部缺失。已穷尽验证：`ja` 语言包索引 142,701 个 AudioClip 中，`c530*`
+一条都没有 —— 客户端日文语音包未收录该角色。互动时动画正常播放，语音静默跳过
+（`interaction.js` 的 `_voiceKnownMissing` 会记住并在状态栏提示）。
+
+**2. 19 条 SoundEvents 僵尸键**
+
+部分 `meta.json` 的 `sounds` 里存在 skel 中并不存在的动画名，例如：
+
+```
+c181/cover      cover_reload2 / cover_reload_loop_all
+                cover_reload_loop_before / cover_reload_start_before
+c080_01/cover   x_cover_reload_strat
+c191/cover      cover_skillcut_1
+c300/cover      cover_reload1 / cover_reload2
+```
+
+回源验证：这些名字在对应 `.skel` 字节里 `find()` 全部返回 -1，是游戏配置里
+残留但动画已被裁剪的僵尸条目。`interaction.js` 的 `scheduleSoundEvents`
+有 `meta.animations.includes(animName)` 守卫，不会误触发。
+
+**3. 互动为「点击任意位置轮换」，非分部位触发**
+
+点击角色画布任意位置（短按、位移 <6px）会轮换触发
+`Touch_1 → Touch_2 → Touch_3`，而不是「点头部播 head 动画」。
+
+依据：穷尽扫描 9808 个静态表后确认，**没有任何表把 `reactionId` 与身体部位关联**。
+`CharacterReactionTable` 的 15 个字段里没有部位枚举列（15 个部位关键词出现次数
+全部为 0），tail 的 2 个 f32 与反应序号无对应关系（若是部位，Touch_1/2/3 应稳定
+对应不同值，实际是混乱分布）。`CharacterVoiceGroupTable` 只是纯语音映射，
+`LiveWallpaperReactionTable` 全是剧情 ID，`InteractionObjectTable` 是场景交互物件。
+
+因此轮换实现符合游戏真实行为。
+
+---
+
+## 六、版权说明
 
 仅用于个人学习研究。Spine 立绘 / 模型版权归属 NIKKE（SHIFT UP / Level Infinite），
 请勿商用或公开再分发。

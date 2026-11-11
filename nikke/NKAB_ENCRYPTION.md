@@ -1,8 +1,22 @@
 # NIKKE NKAB 加密调研笔记
 
-本文记录对 NIKKE 本地客户端缓存中 **NKAB 加密包**的调研结论：为什么本地
-`extract_local.py` 只能拆出 skillcut / 剧情演出，而拆不出常规立绘（fb）/ 半身（cover）/
-瞄准（aim），以及 NKAB 加密的原理与破解现状。
+> **⚠️ 2026-11-10 重要更新：本文结论仅适用于旧版 `naps/` 缓存分发。**
+>
+> 新版客户端（153.x）改用 `com.shiftup.patch/<pak>/chunk/store.cdb` 分发，
+> 该格式**内容层只有 zstd 压缩，没有任何 NKAB 加密**；目录库 `catalog.ndb`
+> 的 AES 密钥甚至明文存在文件头。因此 **fb/cover/aim 现在可以在本地完整解包，
+> 不再依赖 Nikke-db CDN**。
+>
+> 新方案见 [`DATASOURCE.md`](./DATASOURCE.md)「NIKKE 本地解包管线」一节，
+> 代码在 `scripts/extract_cdb.py` / `nikke_cdb_lib.py`。
+>
+> 以下原文保留，作为旧版格式的历史调研记录。
+
+---
+
+本文记录对 NIKKE 旧版客户端缓存中 **NKAB 加密包**的调研结论：为什么本地
+`extract_local.py`（面向 `naps/` 目录）只能拆出 skillcut / 剧情演出，而拆不出常规立绘（fb）/
+半身（cover）/ 瞄准（aim），以及 NKAB 加密的原理与破解现状。
 
 > **一句话结论**：常规立绘 fb/cover/aim 被 **NKAB v4 加密**保护，而目前**没有公开可用的
 > v4 解密器**（公开实现只到 v3，已过时）。因此本地拆不出这三种姿态，只能走 Nikke-db CDN
