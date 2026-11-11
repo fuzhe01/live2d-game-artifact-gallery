@@ -219,6 +219,84 @@ c300/cover      cover_reload1 / cover_reload2
 
 ---
 
+## 五之二、CDN 与本地资源的完整性差异（2026-11-11 全量实测）
+
+**背景**：早期从 Nikke-db CDN 下载资源时，**下到 257 个角色就转向了本地解包路线**，
+CDN 下载并未完成。因此 `data/` 目录里混着两个来源的资源，需要区分对待。
+
+### 各来源的判定方法
+
+| 来源 | 判定依据 |
+|---|---|
+| Nikke-db CDN | `.skel` 的 mtime 在 `11-10 15:xx` |
+| 本地 cdb 解包 | `.skel` 的 mtime 在 `11-10 17:xx` |
+
+两批 **cid 完全不重叠**（257 vs 440，交集 0），每个目录只有一套来源。
+
+### 四类资源
+
+| 类别 | 数量 | 处理 |
+|---|---|---|
+| 本地 cdb 解包（当前版本） | 440 | 基准 |
+| CDN 已下载 + cdb 也有 | **205** | 可用 cdb 覆盖更新 |
+| CDN 已下载 + cdb 没有 | **52** | **唯一副本，必须保留** |
+| CDN 索引有 + 文件不存在 | **7** | 永久缺失 |
+
+### 52 个 CDN 独有资源（catalog 里真的没有）
+
+```
+c010_03  c350_old  c803_01  c903_01  c907_01  c908
+777  bluewaterisland  bowwowparadise  cherryblossom  goldenship
+ltk  maidinvalentine  nocallerid  nyanyaparadise  outerautomata
+queensorder  schooloflock  seayouagain
+smol_anchor  smol_bolt  smol_frima  smol_helm  smol_liter
+smol_mary  smol_mast  smol_pepper  smol_rapi  smol_yan
+story0001  story0001_2  story0002  story0002_2  story0003
+story0201  story0401  story0401_2  story0405  story0702
+story1201  story1302  story1303  story1401  story1403
+story1405  story1501  story1902  story2002  story2101
+story2201  story2202  story2206
+```
+
+这些是 CDN 快照里存在、但**当前客户端已移除**的资源（活动下架 / 角色改版 / 剧情资源回收）。
+
+### 7 个永久缺失的角色
+
+| ID | 名录名 | 语音 | 反应 | manifest | ja 音频 clip | CDN 文件 |
+|---|---|---|---|---|---|---|
+| c053 | **liqueur** | — | — | — | — | HTML 404 |
+| c081 | **Acre** | — | — | — | — | HTML 404 |
+| c122 | c122 | — | — | — | — | HTML 404 |
+| c211 | c211 | — | — | — | — | HTML 404 |
+| c320 | **Bibli** | — | — | — | — | HTML 404 |
+| c340 | **Siren** | — | — | — | — | HTML 404 |
+| c342 | **Pin** | — | — | — | — | HTML 404 |
+
+**结论：这 7 个不是「漏下载」，而是索引里有条目、文件从未存在。**
+
+判据（全部实测）：
+- 本地 catalog（core/dp/fd/ja 共 43,168 个 bundle key）深度穷举 → 无对应 spine
+- `voiceIndex.json` / `reactions.json` / `ja_audio_index.json`（142,701 clip）→ 全无记录
+- `manifest` → 不在列表
+- CDN 三个镜像（`nikke-db-legacy.pages.dev` / `nikke-db.pages.dev` /
+  `raw.githubusercontent.com`）→ 全部返回 HTML 假响应
+
+> ⚠️ **CDN 对不存在的文件返回 `200 + HTML 404 页`，不是 404 状态码。**
+> 实测 c010（真资源）返回 `\xef\xbb\xbfc010_00.png\nsize:2048,2048`；
+> c053（假资源）返回 `<!DOCTYPE html>`。
+> 因此**不能靠 HTTP 状态码判断文件是否存在**，
+> `fetch_nikke.py` 的判据（能否从 atlas 解析出 png 页名）才是正确的。
+
+### 相关脚本
+
+| 脚本 | 用途 |
+|---|---|
+| `scripts/replace_cdn_with_cdb.py` | 用 cdb 版覆盖 CDN 版（含快照/验证） |
+| `scripts/apply_cdn_coverage.py` | 按精确匹配结果执行覆盖 |
+| `scripts/render_icons_v2.py` | 用 viewer 渲染 256×512 缩略图 |
+
+---
+
 ## 六、版权说明
 
 仅用于个人学习研究。Spine 立绘 / 模型版权归属 NIKKE（SHIFT UP / Level Infinite），
