@@ -616,6 +616,185 @@
     }
     .vb-grid{grid-template-columns:1fr}
   }
+
+  /* 皮肤对比同屏（§4.2） */
+  .sc-panel{
+    position:absolute; inset:0; z-index:18;
+    display:none; flex-direction:column;
+    background:rgba(12,6,10,.97);
+  }
+  .sc-panel.on{display:flex}
+  .sc-head{
+    display:flex; align-items:center; gap:.7rem; flex:none;
+    padding:.6rem 1rem; border-bottom:1px solid var(--line);
+  }
+  .sc-title{font-family:var(--mono); font-size:.78rem; letter-spacing:.08em; color:var(--accent-lit)}
+  .sc-count{font-family:var(--mono); font-size:.62rem; color:var(--foam); opacity:.8}
+  .sc-close{
+    margin-left:auto; font-family:var(--mono); font-size:.66rem;
+    color:var(--ivory); background:rgba(42,22,32,.92);
+    border:1px solid var(--line-lit); border-radius:5px;
+    padding:.32rem .6rem; cursor:pointer; user-select:none;
+  }
+  .sc-close:hover{border-color:var(--accent); color:var(--accent-lit)}
+  .sc-grid{
+    flex:1; min-height:0; display:grid; gap:.5rem;
+    padding:.6rem 1rem; overflow:hidden;
+  }
+  .sc-cell{
+    position:relative; min-width:0; min-height:0;
+    display:flex; flex-direction:column;
+    border:1px solid var(--line); border-radius:8px;
+    background:rgba(255,255,255,.015); overflow:hidden;
+  }
+  .sc-cell-name{
+    flex:none; font-family:var(--mono); font-size:.66rem;
+    color:var(--ivory); padding:.3rem .45rem .05rem;
+    text-align:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .sc-cell-id{
+    flex:none; font-family:var(--mono); font-size:.54rem;
+    color:var(--foam); opacity:.7; text-align:center; padding-bottom:.2rem;
+  }
+  .sc-canvas{flex:1; min-height:0; position:relative}
+  .sc-canvas canvas{width:100%!important; height:100%!important; display:block}
+  .sc-canvas .spine-player{background:transparent!important}
+  .sc-cell-state{
+    flex:none; font-family:var(--mono); font-size:.54rem;
+    color:var(--accent-lit); text-align:center;
+    padding:.2rem; border-top:1px solid var(--line);
+  }
+  .sc-bar{
+    flex:none; display:flex; align-items:center; gap:.6rem;
+    padding:.5rem 1rem .7rem; border-top:1px solid var(--line);
+    flex-wrap:wrap;
+  }
+  .sc-label{font-family:var(--mono); font-size:.6rem; color:var(--foam); flex:none}
+  .sc-anims{display:flex; gap:.3rem; flex-wrap:wrap; max-height:4.4rem; overflow-y:auto}
+  .sc-anim-btn{
+    font-family:var(--mono); font-size:.6rem;
+    background:rgba(42,22,32,.92); border:1px solid var(--line-lit);
+    color:var(--ivory); padding:.28rem .45rem; border-radius:4px; cursor:pointer;
+  }
+  .sc-anim-btn:hover{border-color:var(--accent); color:var(--accent-lit)}
+  .sc-anim-btn.on{background:var(--accent); color:var(--abyss); border-color:var(--accent); font-weight:600}
+  .sc-none{font-family:var(--mono); font-size:.6rem; color:var(--foam); opacity:.7}
+  @media(max-width:720px){
+    .sc-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  }
+
+  /* 播放速度面板（§6.6） */
+  .sp-panel{
+    position:absolute; bottom:9.6rem; left:1.4rem; z-index:16;
+    width:min(230px,calc(100vw - 2.8rem));
+    display:none; flex-direction:column;
+    background:rgba(26,13,20,.96); border:1px solid var(--line-lit);
+    border-radius:8px; padding:.55rem .7rem .65rem;
+    backdrop-filter:blur(12px); box-shadow:0 8px 24px rgba(0,0,0,.5);
+  }
+  .sp-panel.on{display:flex}
+  .sp-head{display:flex; align-items:center; gap:.5rem; margin-bottom:.4rem}
+  .sp-title{font-family:var(--mono); font-size:.68rem; letter-spacing:.06em; color:var(--accent-lit)}
+  .sp-val{font-family:var(--mono); font-size:.72rem; color:var(--ivory); margin-left:auto; font-weight:600}
+  .sp-close{font-family:var(--mono); font-size:.8rem; color:var(--foam); cursor:pointer; padding:0 .25rem}
+  .sp-close:hover{color:var(--accent-lit)}
+  .sp-range{
+    -webkit-appearance:none; appearance:none; width:100%; height:5px;
+    background:var(--line); border-radius:3px; outline:none; cursor:pointer;
+  }
+  .sp-range::-webkit-slider-thumb{
+    -webkit-appearance:none; width:14px; height:14px; border-radius:50%;
+    background:var(--accent); border:2px solid var(--abyss);
+  }
+  .sp-presets{display:flex; gap:.25rem; margin-top:.45rem}
+  .sp-preset{
+    flex:1; font-family:var(--mono); font-size:.58rem;
+    background:rgba(42,22,32,.92); border:1px solid var(--line-lit);
+    color:var(--ivory); padding:.26rem .1rem; border-radius:4px; cursor:pointer;
+  }
+  .sp-preset:hover{border-color:var(--accent); color:var(--accent-lit)}
+  .sp-preset.on{background:var(--accent); color:var(--abyss); border-color:var(--accent); font-weight:600}
+
+  /* 截图面板（§7） */
+  .shot-panel{
+    position:absolute; bottom:9.6rem; right:1.4rem; z-index:16;
+    width:min(230px,calc(100vw - 2.8rem));
+    display:none; flex-direction:column;
+    background:rgba(26,13,20,.96); border:1px solid var(--line-lit);
+    border-radius:8px; padding:.55rem .7rem .65rem;
+    backdrop-filter:blur(12px); box-shadow:0 8px 24px rgba(0,0,0,.5);
+  }
+  .shot-panel.on{display:flex}
+  .shot-head{display:flex; align-items:center; gap:.5rem; margin-bottom:.4rem}
+  .shot-title{font-family:var(--mono); font-size:.68rem; letter-spacing:.06em; color:var(--accent-lit)}
+  .shot-close{font-family:var(--mono); font-size:.8rem; color:var(--foam); cursor:pointer; padding:0 .25rem; margin-left:auto}
+  .shot-close:hover{color:var(--accent-lit)}
+  .shot-row{display:flex; align-items:center; gap:.4rem; margin-top:.3rem}
+  .shot-label{font-family:var(--mono); font-size:.58rem; color:var(--foam); width:3.4rem; flex:none}
+  .shot-sel{
+    flex:1; min-width:0; font-family:var(--mono); font-size:.6rem;
+    background:rgba(18,8,14,.8); border:1px solid var(--line); color:var(--ivory);
+    padding:.24rem .3rem; border-radius:4px; outline:none;
+  }
+  .shot-sel:focus{border-color:var(--accent)}
+  .shot-btn{
+    width:100%; margin-top:.5rem; font-family:var(--mono); font-size:.64rem;
+    background:rgba(42,22,32,.92); border:1px solid var(--line-lit); color:var(--ivory);
+    padding:.36rem; border-radius:4px; cursor:pointer;
+  }
+  .shot-btn:hover{border-color:var(--accent); color:var(--accent-lit)}
+  .shot-hint{font-family:var(--mono); font-size:.54rem; color:var(--foam); opacity:.65; margin-top:.3rem; line-height:1.5}
+
+  /* 收藏星标（§8） */
+  .fav-star{
+    position:absolute; top:.3rem; right:.35rem; z-index:3;
+    font-size:1rem; line-height:1; cursor:pointer; user-select:none;
+    color:rgba(255,255,255,.35); text-shadow:0 1px 3px rgba(0,0,0,.8);
+    transition:.14s; padding:.1rem;
+  }
+  .fav-star:hover{transform:scale(1.2); color:var(--accent-lit)}
+  .fav-star.on{color:#ffd76a; text-shadow:0 0 6px rgba(255,215,106,.6)}
+  #nav-fav.on{background:var(--accent); color:var(--abyss); font-weight:600}
+  .fav-empty{
+    grid-column:1/-1; text-align:center; padding:3rem 1rem;
+    font-family:var(--mono); font-size:.8rem; color:var(--foam); opacity:.7;
+  }
+
+  /* 旋转 / 镜像面板（§6.5） */
+  .tf-panel{
+    position:absolute; bottom:9.6rem; left:15.5rem; z-index:16;
+    width:min(210px,calc(100vw - 2.8rem));
+    display:none; flex-direction:column;
+    background:rgba(26,13,20,.96); border:1px solid var(--line-lit);
+    border-radius:8px; padding:.55rem .7rem .65rem;
+    backdrop-filter:blur(12px); box-shadow:0 8px 24px rgba(0,0,0,.5);
+  }
+  .tf-panel.on{display:flex}
+  .tf-head{display:flex; align-items:center; gap:.5rem; margin-bottom:.4rem}
+  .tf-title{font-family:var(--mono); font-size:.68rem; letter-spacing:.06em; color:var(--accent-lit)}
+  .tf-close{font-family:var(--mono); font-size:.8rem; color:var(--foam); cursor:pointer; padding:0 .25rem; margin-left:auto}
+  .tf-close:hover{color:var(--accent-lit)}
+  .tf-row{display:flex; align-items:center; gap:.4rem; margin-top:.3rem}
+  .tf-label{font-family:var(--mono); font-size:.58rem; color:var(--foam); width:2.6rem; flex:none}
+  .tf-range{
+    -webkit-appearance:none; appearance:none; flex:1; height:5px;
+    background:var(--line); border-radius:3px; outline:none; cursor:pointer;
+  }
+  .tf-range::-webkit-slider-thumb{
+    -webkit-appearance:none; width:14px; height:14px; border-radius:50%;
+    background:var(--accent); border:2px solid var(--abyss);
+  }
+  .tf-val{font-family:var(--mono); font-size:.58rem; color:var(--accent-lit); width:2.6rem; text-align:right}
+  .tf-actions{display:flex; gap:.25rem; margin-top:.5rem}
+  .tf-btn{
+    flex:1; font-family:var(--mono); font-size:.6rem;
+    background:rgba(42,22,32,.92); border:1px solid var(--line-lit); color:var(--ivory);
+    padding:.3rem .1rem; border-radius:4px; cursor:pointer;
+  }
+  .tf-btn:hover{border-color:var(--accent); color:var(--accent-lit)}
+  .tf-btn.on{background:var(--accent); color:var(--abyss); border-color:var(--accent); font-weight:600}
+  /* 变换施加在 canvas 上（不动 player 内部坐标系，保证点击互动仍按原坐标） */
+  #player-container{transform-origin:center center}
 </style>
 </head>
 <body>
@@ -628,6 +807,7 @@
     <button data-cat="event">活动</button>
     <button data-cat="story">剧情</button>
     <button data-cat="misc">其它</button>
+    <button data-cat="fav" id="nav-fav">⭐ 收藏</button>
   </nav>
 </header>
 
@@ -681,6 +861,10 @@
       <button class="ia-btn" id="ia-debug" title="骨骼/网格调试视图">骨骼</button>
       <button class="ia-btn" id="ia-pose-act" title="当前姿态专属动作（换弹/开火/瞄准）">姿态动作</button>
       <button class="ia-btn toggle on" id="ia-sub" title="语音字幕气泡">字幕</button>
+      <button class="ia-btn" id="ia-skin-compare" title="同角色多皮肤并排对比">皮肤对比</button>
+      <button class="ia-btn" id="ia-speed" title="播放速度 0.1x~2.0x">速度</button>
+      <button class="ia-btn" id="ia-shot" title="导出当前画面为 PNG">截图</button>
+      <button class="ia-btn" id="ia-transform" title="旋转 / 镜像翻转">旋转</button>
       <span class="ia-status" id="ia-status"></span>
     </div>
     <div class="stage">
@@ -703,6 +887,7 @@
 <script src="debugview.js"></script>
 <script src="poseactions.js"></script>
 <script src="subtitle.js"></script>
+<script src="skincompare.js"></script>
 <script src="interaction.js"></script>
 <script>
 const POSE_LABEL = { fb: '立绘', cover: '半身', aim: '瞄准', skillcut: '技能演出' };
@@ -745,6 +930,83 @@ function playAnim(pl, anims, name){
   pl.play();
 }
 
+// ═══ §4.5 姿态无缝切换（保留动画时间进度）═══════════════════════
+//
+// 背景：切 fb/cover/aim 时 loadPose() 会 dispose 旧 player、new 一个新 player。
+// 旧实现里新 player 一律从动画 0 秒开始 → 视觉上「闪一下 / 跳回起点」。
+//
+// 做法：切换前把旧 player 的当前动画名 + 归一化相位(0..1) 记下来，
+// 新 player 加载成功后：
+//   1) 优先播【同名动画】（若新姿态有）
+//   2) 否则按语义映射（idle→cover_idle/aim_idle、action→cover_reload 等）
+//   3) 把新动画 seek 到相同相位（用 trackTime = 相位 × 新动画时长）
+//
+// 注意：三个姿态的 idle 动画时长不同（fb idle 3.33s / cover_idle 2.0s /
+// aim_idle 2.0s），所以要用【归一化相位】而不是绝对秒数，否则会越界。
+let poseHandoff = null;   // {fromPose, anim, phase, ts}
+
+// 记录切换前的动画状态（在 disposePlayer 之前调用）
+function capturePoseHandoff(fromPose){
+  poseHandoff = null;
+  try{
+    const pl = (typeof player !== 'undefined') ? player : null;
+    if(!pl) return;
+    const e = pl.animationState.getCurrent(0);
+    if(!e || !e.animation) return;
+    const dur = e.animation.duration || 0;
+    const phase = dur > 0 ? (e.trackTime % dur) / dur : 0;
+    poseHandoff = {
+      fromPose: fromPose || current.pose,
+      anim: e.animation.name,
+      phase: Math.max(0, Math.min(1, phase)),
+      ts: performance.now(),
+    };
+  }catch(e){ poseHandoff = null; }
+}
+
+// 语义映射：旧姿态动画名 → 新姿态候选名（按优先级）
+const POSE_ANIM_ALIAS = {
+  idle:      ['idle', 'cover_idle', 'aim_idle', 'stand', 'wait'],
+  cover_idle:['cover_idle', 'aim_idle', 'idle'],
+  aim_idle:  ['aim_idle', 'cover_idle', 'idle'],
+  action:    ['action', 'cover_reload', 'aim_fire', 'idle'],
+};
+
+/** 在新姿态的动画列表里挑一个与 handoff 最接近的 */
+function pickHandoffAnim(anims, handoff, pose){
+  if(!handoff) return null;
+  const old = handoff.anim;
+  // 1) 同名
+  if(anims.includes(old)) return old;
+  // 2) 别名表
+  const alias = POSE_ANIM_ALIAS[old];
+  if(alias){
+    const hit = alias.find(a => anims.includes(a));
+    if(hit) return hit;
+  }
+  // 3) 同类别启发式：把 idle / cover_idle / aim_idle 视为一类
+  if(/idle/i.test(old)){
+    const idleCand = anims.find(a => /idle/i.test(a));
+    if(idleCand) return idleCand;
+  }
+  return null;   // 找不到就交给默认逻辑
+}
+
+/** 把新 player 的动画 seek 到 handoff 相位 */
+function applyPoseHandoff(pl, anims, chosen){
+  if(!poseHandoff || !chosen) return false;
+  try{
+    const a = pl.animationState.data.skeletonData.findAnimation(chosen);
+    if(!a || !a.duration) return false;
+    const e = pl.animationState.getCurrent(0);
+    if(!e) return false;
+    e.trackTime = poseHandoff.phase * a.duration;
+    pl.animationState.apply(pl.skeleton);
+    pl.skeleton.updateWorldTransform();
+    return true;
+  }catch(e){ return false; }
+}
+
 const CARD_COLS_KEY = 'nikke.cardColumns';
 const CARD_COL_OPTIONS = [
   ['auto', '自动列数'], ['3', '每行 3 个'], ['4', '每行 4 个'], ['5', '每行 5 个'],
@@ -766,6 +1028,12 @@ let mixPanel = null;         // MixPanel 实例
 let debugView = null;        // DebugView 实例
 let poseActions = null;      // PoseActions 实例
 let subtitle = null;         // SubtitleBubble 实例
+let skinCompare = null;      // SkinCompare 实例
+let playbackSpeed = 1.0;    // §6.6 全局播放速度（切姿态后仍生效）
+let speedPanel = null;       // 速度面板 DOM
+let shotPanel = null;        // §7 截图面板 DOM
+let tfPanel = null;          // §6.5 旋转/镜像面板 DOM
+let viewTransform = { rotate: 0, flipH: false, flipV: false };
 let extrasHidden = false;    // 配件是否已隐藏
 let extrasSaved = null;      // 被隐藏的 slot 原始 attachment
 
@@ -990,6 +1258,251 @@ function initSubtitle(){
   }
 }
 
+function initSkinCompare(){
+  skinCompare = new SkinCompare({
+    getManifest: () => (manifest ? manifest.characters : []),
+    getRuntime: (ver) => (ver === '4.0' ? spine40 : spine41),
+    blobToDataURL,
+    waitForSize,
+    findIdle,
+    onStatus: setIaStatus,
+  });
+  window.__sc = skinCompare;
+}
+
+// ═══ §6.6 播放速度 ═══════════════════════════════════════════
+//
+// 用 animationState.timeScale 控制。spine-player 的 timeScale 在
+// player 重建后会回到 1，所以保存在全局 playbackSpeed，
+// 在 loadPose 的 success 回调里重新应用（见下方）。
+const SPEED_PRESETS = [0.1, 0.25, 0.5, 1, 1.5, 2];
+
+function applyPlaybackSpeed(pl, v){
+  if(!pl) return false;
+  try{
+    pl.animationState.timeScale = v;
+    // 有些版本用 player.speed 字段驱动渲染循环
+    if(typeof v === 'number') pl.speed = v;
+    return true;
+  }catch(e){ return false; }
+}
+
+function setPlaybackSpeed(v, fromUi){
+  v = Math.max(0.1, Math.min(2, parseFloat(v) || 1));
+  playbackSpeed = v;
+  const pl = interaction && interaction.player;
+  applyPlaybackSpeed(pl, v);
+  // 皮肤对比模式也同步
+  if(skinCompare && skinCompare.isActive()) skinCompare.setSpeed(v);
+  // UI
+  const val = document.getElementById('sp-val');
+  if(val) val.textContent = v.toFixed(2).replace(/0$/, '') + 'x';
+  const range = document.getElementById('sp-range');
+  if(range && !fromUi) range.value = v;
+  document.querySelectorAll('.sp-preset').forEach(b =>
+    b.classList.toggle('on', Math.abs(parseFloat(b.dataset.v) - v) < 0.001));
+  setIaStatus(`播放速度 ${v}x`);
+}
+
+function buildSpeedPanel(host){
+  if(speedPanel) return speedPanel;
+  speedPanel = document.createElement('div');
+  speedPanel.className = 'sp-panel';
+  speedPanel.innerHTML = `
+    <div class="sp-head">
+      <span class="sp-title">播放速度</span>
+      <span class="sp-val" id="sp-val">1x</span>
+      <span class="sp-close" id="sp-close" role="button" tabindex="0">✕</span>
+    </div>
+    <input type="range" class="sp-range" id="sp-range"
+           min="0.1" max="2" step="0.05" value="1">
+    <div class="sp-presets" id="sp-presets"></div>`;
+  host.appendChild(speedPanel);
+
+  const closeEl = speedPanel.querySelector('#sp-close');
+  closeEl.onclick = () => speedPanel.classList.remove('on');
+  closeEl.onkeydown = (e) => {
+    if(e.key === 'Enter' || e.key === ' ') speedPanel.classList.remove('on');
+  };
+
+  const range = speedPanel.querySelector('#sp-range');
+  range.oninput = () => setPlaybackSpeed(parseFloat(range.value), true);
+
+  const presets = speedPanel.querySelector('#sp-presets');
+  SPEED_PRESETS.forEach(v => {
+    const b = document.createElement('button');
+    b.className = 'sp-preset';
+    b.dataset.v = v;
+    b.textContent = v + 'x';
+    b.onclick = () => setPlaybackSpeed(v);
+    presets.appendChild(b);
+  });
+  return speedPanel;
+}
+
+// ═══ §7 高画质截图导出 ═══════════════════════════════════════
+//
+// spine-player 构造时带了 preserveDrawingBuffer: true，
+// 所以 canvas.toDataURL('image/png') 能拿到完整画面。
+//
+// 支持三种背景：
+//   transparent —— 直接导出 canvas（透明底，PNG alpha 保留）
+//   dark        —— 用 viewer 的深底色填充
+//   white       —— 纯白底
+// 做法是新建一个离屏 canvas，先填背景再 drawImage 主 canvas。
+function buildShotPanel(host){
+  if(shotPanel) return shotPanel;
+  shotPanel = document.createElement('div');
+  shotPanel.className = 'shot-panel';
+  shotPanel.innerHTML = `
+    <div class="shot-head">
+      <span class="shot-title">截图导出</span>
+      <span class="shot-close" id="shot-close" role="button" tabindex="0">✕</span>
+    </div>
+    <div class="shot-row">
+      <label class="shot-label">背景</label>
+      <select class="shot-sel" id="shot-bg">
+        <option value="transparent">透明</option>
+        <option value="dark" selected>深色</option>
+        <option value="white">纯白</option>
+      </select>
+    </div>
+    <div class="shot-row">
+      <label class="shot-label">倍率</label>
+      <select class="shot-sel" id="shot-scale">
+        <option value="1">1x (原始)</option>
+        <option value="2" selected>2x</option>
+        <option value="3">3x</option>
+      </select>
+    </div>
+    <button class="shot-btn" id="shot-save">保存 PNG</button>
+    <div class="shot-hint">透明底保留 alpha；2x/3x 会重采样放大，细节不会凭空增加。</div>`;
+  host.appendChild(shotPanel);
+
+  const closeEl = shotPanel.querySelector('#shot-close');
+  closeEl.onclick = () => shotPanel.classList.remove('on');
+  closeEl.onkeydown = (e) => {
+    if(e.key === 'Enter' || e.key === ' ') shotPanel.classList.remove('on');
+  };
+
+  shotPanel.querySelector('#shot-save').onclick = () => exportScreenshot();
+  return shotPanel;
+}
+
+function exportScreenshot(){
+  const pl = interaction && interaction.player;
+  if(!pl || !pl.canvas){ setIaStatus('截图失败：没有可导出的画布'); return null; }
+  const src = pl.canvas;
+  const bg = (document.getElementById('shot-bg') || {}).value || 'dark';
+  const scale = parseFloat((document.getElementById('shot-scale') || {}).value || '1');
+
+  try{
+    const w = Math.round(src.width * scale);
+    const h = Math.round(src.height * scale);
+    const out = document.createElement('canvas');
+    out.width = w; out.height = h;
+    const ctx = out.getContext('2d');
+    // 背景
+    if(bg === 'dark'){ ctx.fillStyle = '#160d16'; ctx.fillRect(0, 0, w, h); }
+    else if(bg === 'white'){ ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, w, h); }
+    // 主画面（放大时用平滑插值）
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(src, 0, 0, w, h);
+
+    const url = out.toDataURL('image/png');
+    // 文件名：角色_姿态_时间戳.png
+    const c = manifest.characters[current.idx];
+    const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const name = `${c ? c.id : 'nikke'}_${current.pose}_${ts}.png`;
+    const a = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setIaStatus(`已导出 ${name} (${w}×${h}, ${bg})`);
+    return {name, w, h, bg, bytes: Math.round(url.length * 0.75)};
+  }catch(e){
+    setIaStatus('截图失败: ' + e.message);
+    console.warn('[shot]', e);
+    return null;
+  }
+}
+
+// ═══ §6.5 旋转 / 镜像翻转 ═════════════════════════════════════
+//
+// 用 CSS transform 施加在 #player-container 上，不动 spine 内部坐标系。
+// 这样点击互动（命中检测走的是骨架坐标）不受影响，字幕气泡的
+// 投影也仍然正确（气泡是 position:fixed，不在被变换的容器内）。
+//
+// 注意：transform 会让 canvas 视觉旋转，但 canvas 的 getBoundingClientRect
+// 会跟着变；截图导出用的是 canvas.width/height（未旋转的原始像素），
+// 所以导出的是「未变换」的原始画面 —— 这是刻意的，避免导出的图被裁切。
+function applyViewTransform(){
+  const el = document.getElementById('player-container');
+  if(!el) return;
+  const t = viewTransform;
+  const sx = t.flipH ? -1 : 1;
+  const sy = t.flipV ? -1 : 1;
+  el.style.transform = `rotate(${t.rotate}deg) scale(${sx}, ${sy})`;
+  const rv = document.getElementById('tf-rot-v');
+  if(rv) rv.textContent = t.rotate + '°';
+  document.querySelectorAll('.tf-btn[data-tf]').forEach(b => {
+    const k = b.dataset.tf;
+    b.classList.toggle('on', (k === 'flipH' && t.flipH)
+                          || (k === 'flipV' && t.flipV));
+  });
+}
+
+function setViewTransform(patch){
+  Object.assign(viewTransform, patch);
+  if(viewTransform.rotate > 360) viewTransform.rotate -= 360;
+  if(viewTransform.rotate < 0) viewTransform.rotate += 360;
+  applyViewTransform();
+  const r = document.getElementById('tf-rot');
+  if(r) r.value = viewTransform.rotate;
+  setIaStatus(`视角 旋转${viewTransform.rotate}° ${viewTransform.flipH?'水平镜像 ':''}${viewTransform.flipV?'垂直镜像':''}`);
+}
+
+function buildTfPanel(host){
+  if(tfPanel) return tfPanel;
+  tfPanel = document.createElement('div');
+  tfPanel.className = 'tf-panel';
+  tfPanel.innerHTML = `
+    <div class="tf-head">
+      <span class="tf-title">旋转 / 镜像</span>
+      <span class="tf-close" id="tf-close" role="button" tabindex="0">✕</span>
+    </div>
+    <div class="tf-row">
+      <label class="tf-label">旋转</label>
+      <input type="range" class="tf-range" id="tf-rot" min="0" max="360" step="1" value="0">
+      <span class="tf-val" id="tf-rot-v">0°</span>
+    </div>
+    <div class="tf-actions">
+      <button class="tf-btn" data-tf="flipH">左右翻转</button>
+      <button class="tf-btn" data-tf="flipV">上下翻转</button>
+    </div>
+    <div class="tf-actions">
+      <button class="tf-btn" id="tf-reset">复位</button>
+    </div>`;
+  host.appendChild(tfPanel);
+
+  const closeEl = tfPanel.querySelector('#tf-close');
+  closeEl.onclick = () => tfPanel.classList.remove('on');
+  closeEl.onkeydown = (e) => {
+    if(e.key === 'Enter' || e.key === ' ') tfPanel.classList.remove('on');
+  };
+  tfPanel.querySelector('#tf-rot').oninput = (e) =>
+    setViewTransform({ rotate: parseInt(e.target.value, 10) });
+  tfPanel.querySelectorAll('.tf-btn[data-tf]').forEach(b => {
+    b.onclick = () => {
+      const k = b.dataset.tf;
+      setViewTransform({ [k]: !viewTransform[k] });
+    };
+  });
+  tfPanel.querySelector('#tf-reset').onclick = () =>
+    setViewTransform({ rotate: 0, flipH: false, flipV: false });
+  return tfPanel;
+}
+
 function initInteraction(){
   interaction = new NikkeInteraction({
     dataDir: '../data',
@@ -1181,6 +1694,54 @@ function initInteraction(){
     };
   }
 
+  // 皮肤对比
+  const scBtn = document.getElementById('ia-skin-compare');
+  if (scBtn) {
+    scBtn.onclick = async () => {
+      if (!skinCompare) initSkinCompare();
+      const c = manifest.characters[current.idx];
+      if (!c) return;
+      const active = await skinCompare.toggle(c.id, current.pose);
+      scBtn.classList.toggle('on', !!active);
+    };
+  }
+
+  // 播放速度
+  const spBtn = document.getElementById('ia-speed');
+  if (spBtn) {
+    spBtn.onclick = () => {
+      const host = document.getElementById('stage-view');
+      const panel = buildSpeedPanel(host);
+      panel.classList.toggle('on');
+      spBtn.classList.toggle('on', panel.classList.contains('on'));
+      // 打开时把当前实际速度同步到 UI
+      if (panel.classList.contains('on')) setPlaybackSpeed(playbackSpeed);
+    };
+  }
+
+  // 截图导出
+  const shotBtn = document.getElementById('ia-shot');
+  if (shotBtn) {
+    shotBtn.onclick = () => {
+      const host = document.getElementById('stage-view');
+      const panel = buildShotPanel(host);
+      panel.classList.toggle('on');
+      shotBtn.classList.toggle('on', panel.classList.contains('on'));
+    };
+  }
+
+  // 旋转 / 镜像
+  const tfBtn = document.getElementById('ia-transform');
+  if (tfBtn) {
+    tfBtn.onclick = () => {
+      const host = document.getElementById('stage-view');
+      const panel = buildTfPanel(host);
+      panel.classList.toggle('on');
+      tfBtn.classList.toggle('on', panel.classList.contains('on'));
+      if (panel.classList.contains('on')) applyViewTransform();
+    };
+  }
+
   // 点击画布触发互动
   const stage = document.querySelector('#stage-view .stage');
   if (stage) {
@@ -1249,6 +1810,7 @@ async function boot(){
   buildGrid();
   document.getElementById('back').onclick = exitStage;
   initInteraction();
+  initSkinCompare();   // 让 window.__sc 始终可用（对比模式入口）
 }
 
 function applyCardColumns(value){
@@ -1271,11 +1833,39 @@ function setupCardColumns(){
   applyCardColumns(saved);
 }
 
-const CAT_NOUN = { all:'条目', character:'角色', event:'活动', story:'剧情', misc:'其它' };
+const CAT_NOUN = { all:'条目', character:'角色', event:'活动', story:'剧情', misc:'其它', fav:'收藏' };
+
+// ═══ §8 最爱收藏系统 ═════════════════════════════════════════
+// localStorage 存 id 数组；收藏分类 tab 走 applyFilters 的 ui.cat==='fav'。
+const FAV_KEY = 'nikke.favorites';
+let favorites = new Set();
+let refreshGrid = null;      // buildGrid 里注册的刷新回调
+try{
+  const raw = JSON.parse(localStorage.getItem(FAV_KEY) || '[]');
+  if(Array.isArray(raw)) favorites = new Set(raw);
+}catch(e){ favorites = new Set(); }
+
+function saveFavorites(){
+  try{ localStorage.setItem(FAV_KEY, JSON.stringify([...favorites])); }
+  catch(e){ console.warn('[fav] 保存失败', e); }
+}
+function isFav(id){ return favorites.has(id); }
+function toggleFav(id){
+  if(favorites.has(id)) favorites.delete(id);
+  else favorites.add(id);
+  saveFavorites();
+  // 同步所有同名星标
+  document.querySelectorAll(`.fav-star[data-fid="${id}"]`).forEach(el =>
+    el.classList.toggle('on', favorites.has(id)));
+  // 若正在收藏分类且取消了收藏，刷新列表
+  if(ui.cat === 'fav' && typeof refreshGrid === 'function') refreshGrid();
+  return favorites.has(id);
+}
 
 function applyFilters(){
   let items = manifest.characters;
-  if(ui.cat !== 'all') items = items.filter(c => (c.category||'misc') === ui.cat);
+  if(ui.cat === 'fav') items = items.filter(c => favorites.has(c.id));
+  else if(ui.cat !== 'all') items = items.filter(c => (c.category||'misc') === ui.cat);
   if(ui.pose) items = items.filter(c => c.poses && c.poses[ui.pose]);
   if(ui.ver)  items = items.filter(c => String(c.version) === ui.ver);
   if(ui.q){
@@ -1303,19 +1893,34 @@ function buildGrid(){
       card.innerHTML =
         `<div class="thumb">`+
           `<span class="badge">${c.version||''}</span>`+
+          `<span class="fav-star${isFav(c.id)?' on':''}" data-fid="${c.id}" title="收藏/取消收藏">★</span>`+
           `<img loading="lazy" src="${c.cover||''}" alt="${c.name}">`+
           `<div class="poses">${poseKeys.map(p=>`<i${p===ui.pose?' class="hl"':''}>${POSE_LABEL[p]||p}</i>`).join('')}</div>`+
         `</div>`+
         `<div class="name">${c.name}${c.name!==c.id?` · ${c.id}`:''}</div>`;
+      // 星标点击独立处理，不触发进入详情
+      card.querySelector('.fav-star').onclick = (e) => {
+        e.stopPropagation();
+        toggleFav(c.id);
+      };
       card.onclick = () => enterStage(idx, ui.pose || null);
       grid.appendChild(card);
     });
     shown += Math.min(PAGE, filtered.length - shown);
   };
   const reset = () => {
-    filtered = applyFilters(); shown = 0; grid.innerHTML = ''; append();
+    filtered = applyFilters(); shown = 0; grid.innerHTML = '';
+    if(ui.cat === 'fav' && !filtered.length){
+      grid.innerHTML = '<div class="fav-empty">还没有收藏 ⭐<br>点卡片右上角的星标即可加入</div>';
+    } else {
+      append();
+    }
     document.getElementById('count').textContent = `${filtered.length} ${CAT_NOUN[ui.cat]||'条目'}`;
+    // 收藏数徽标
+    const favBtn = document.getElementById('nav-fav');
+    if(favBtn) favBtn.textContent = favorites.size ? `⭐ 收藏 (${favorites.size})` : '⭐ 收藏';
   };
+  refreshGrid = reset;   // 供 toggleFav 在收藏分类下刷新
   new IntersectionObserver(e=>{ if(e[0].isIntersecting && shown<filtered.length) append(); },{rootMargin:'400px'})
     .observe(document.getElementById('sentinel'));
 
@@ -1354,6 +1959,10 @@ function enterStage(i, preferPose){
 }
 
 function exitStage(){
+  // 退出对比模式（若处于对比中），否则残留的多个 player 会一直渲染
+  if (skinCompare && skinCompare.isActive()) skinCompare.close();
+  const scBtn = document.getElementById('ia-skin-compare');
+  if (scBtn) scBtn.classList.remove('on');
   disposePlayer();
   if (interaction) interaction.stop();
   document.getElementById('stage-view').style.display = 'none';
@@ -1368,7 +1977,12 @@ function buildPoseTabs(c){
     b.textContent = POSE_LABEL[pose] || pose;
     b.classList.toggle('on', pose === current.pose);
     b.onclick = () => {
+      // 皮肤对比模式下忽略姿态切换（对比面板自己管理姿态），
+      // 否则会白白重建一个主 player，且对比状态与 current.pose 不一致。
+      if (skinCompare && skinCompare.isActive()) return;
       if(pose === current.pose) return;
+      // §4.5：切姿态前记录当前动画相位，供新 player 无缝接续
+      capturePoseHandoff(current.pose);
       current.pose = pose;
       tabs.querySelectorAll('button').forEach(x=>x.classList.remove('on'));
       b.classList.add('on');
@@ -1541,9 +2155,22 @@ async function loadPose(){
           // 字幕气泡跟随新 player 的骨骼
           if (!subtitle) initSubtitle();
           if(!anims.length){ buildMotionPanel(pl, [], null); return; }
-          const pick = pickDefaultAnim(anims, current.pose);
-          playAnim(pl, anims, pick);
+          // §4.5：优先用旧姿态的动画名/语义别名，并把相位接续过去，
+          // 避免切换时从 0 秒重播导致「闪一下」。
+          let pick = pickHandoffAnim(anims, poseHandoff, current.pose);
+          let handoffApplied = false;
+          if(pick){
+            playAnim(pl, anims, pick);
+            handoffApplied = applyPoseHandoff(pl, anims, pick);
+          }else{
+            pick = pickDefaultAnim(anims, current.pose);
+            playAnim(pl, anims, pick);
+          }
+          poseHandoff = null;   // 一次性，用完即清
+          // §6.6：player 重建后 timeScale 回到 1，重新应用全局速度
+          applyPlaybackSpeed(pl, playbackSpeed);
           buildMotionPanel(pl, anims, pick);
+          if(handoffApplied) setIaStatus(`姿态已切换 · 动画相位已接续`);
         }catch(e){ buildMotionPanel(pl, [], null); }
       },
       error: (pl, msg) => { if(tk===loadToken) setLoading(true, '加载失败: ' + (msg||''), true); },

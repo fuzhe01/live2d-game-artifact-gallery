@@ -95,12 +95,42 @@ class VoiceBrowser {
     }
 
     const filter = this._filter || '';
-    // 分类排序：Lobby 系列优先，其余按名字
+    // 分类排序（§4.1）：按「触发频率 / 用户直觉」固定优先级，
+    // 而不是纯字母序 —— 纯字母序会让 Lobby_Stay 排在 Lobby_Touch 前面
+    // （S < T），但玩家点角色时最常用的是触摸台词。
+    const RANK = {
+      // 大厅互动（最常用）
+      'Lobby_Touch':      10,
+      'Lobby_Touch_Love': 11,
+      'Lobby_Stay':       12,
+      'Lobby_Stay_Love':  13,
+      'Lobby_Out':        14,
+      'Outpost_Touch':    15,
+      // 养成 / 好感
+      'Gift':             20,
+      'Attractive_Up':    21,
+      'Reinforce':        22,
+      'Gacha_Get':        23,
+      'Party_Deploy':     24,
+      // 战斗
+      'Battle_Enter':     30,
+      'Battle_Ready':     31,
+      'Reload':           32,
+      'Ult_Skill_Ready':  33,
+      'Ult_Skill':        34,
+      'FullBurst':        35,
+      'Kill_Monster':     36,
+      'Damage':           37,
+      'Die':              38,
+      'Win':              39,
+      'Field_Touch':      40,
+      'Field_Go':         41,
+    };
+    const rank = (k) => (k in RANK) ? RANK[k] : 100;
     const keys = Object.keys(d).sort((a, b) => {
-      const pa = /^Lobby/.test(a) ? 0 : 1;
-      const pb = /^Lobby/.test(b) ? 0 : 1;
-      if (pa !== pb) return pa - pb;
-      return a.localeCompare(b);
+      const ra = rank(a), rb = rank(b);
+      if (ra !== rb) return ra - rb;
+      return a.localeCompare(b);   // 同优先级内仍按名字，稳定
     });
 
     let total = 0;
