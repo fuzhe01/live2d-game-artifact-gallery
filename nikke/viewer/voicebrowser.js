@@ -145,7 +145,12 @@ class VoiceBrowser {
       group.className = 'vb-group';
       const h = document.createElement('div');
       h.className = 'vb-ghead';
-      h.innerHTML = `<span>${k}</span><b>${items.length}</b>`;
+      // §5「高阶」标识：游戏内需好感度 10 解锁的分类保留标签但不设锁。
+      // 判据：分类名含 _Love（Lobby_Touch_Love / Lobby_Stay_Love）。
+      const isHiTier = /_love$/i.test(k);
+      h.innerHTML = `<span>${k}${isHiTier
+        ? '<i class="vb-tier">高阶</i>' : ''}</span><b>${items.length}</b>`;
+      if (isHiTier) h.classList.add('vb-hi');
       group.appendChild(h);
 
       const grid = document.createElement('div');

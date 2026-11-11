@@ -229,6 +229,16 @@
   }
   .ia-btn:hover{border-color:var(--accent); color:var(--accent-lit)}
   .ia-btn:active{transform:scale(.96)}
+  /* §5「高阶」标识：游戏内需好感度 10 解锁，画廊已全解锁 ——
+     保留标签让用户知道这类语音的门槛，但不设锁。 */
+  .ia-btn.ia-tier-hi{border-color:rgba(255,215,106,.35)}
+  .ia-btn.ia-tier-hi:hover{border-color:#ffd76a; color:#ffd76a}
+  .ia-tier{
+    font-style:normal; font-size:.5rem; line-height:1;
+    margin-left:.3rem; padding:.12rem .2rem;
+    background:rgba(255,215,106,.18); color:#ffd76a;
+    border-radius:3px; vertical-align:super; letter-spacing:0;
+  }
   .ia-btn.toggle{
     min-width:2.1rem; font-size:.86rem; line-height:1;
     color:var(--foam);
@@ -294,6 +304,14 @@
     color:var(--foam-dim); text-transform:uppercase; padding:.25rem .2rem;
   }
   .vb-ghead b{color:var(--accent-lit); font-size:.64rem}
+  /* §5 高阶分类标识（好感度 10 解锁的 _Love 系列） */
+  .vb-ghead.vb-hi span{color:#ffd76a}
+  .vb-tier{
+    font-style:normal; font-size:.5rem; text-transform:none;
+    margin-left:.35rem; padding:.1rem .22rem;
+    background:rgba(255,215,106,.16); color:#ffd76a;
+    border-radius:3px; letter-spacing:0; vertical-align:middle;
+  }
   .vb-grid{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.3rem}
   .vb-item{
     display:flex; justify-content:space-between; align-items:center; gap:.3rem;
@@ -862,9 +880,11 @@
     <div class="motions" id="motion-panel"></div>
     <div class="interact-bar" id="interact-bar">
       <button class="ia-btn" data-kind="touch" title="普通触摸（轮换 1→2→3）">摸摸</button>
-      <button class="ia-btn" data-kind="touch_love" title="好感触摸">好感摸摸</button>
+      <button class="ia-btn ia-tier-hi" data-kind="touch_love"
+              title="高阶触摸（游戏内需好感度 10 解锁，画廊已全解锁）">摸摸<i class="ia-tier">高阶</i></button>
       <button class="ia-btn" data-kind="stay" title="待机台词">待机</button>
-      <button class="ia-btn" data-kind="stay_love" title="好感待机台词">好感待机</button>
+      <button class="ia-btn ia-tier-hi" data-kind="stay_love"
+              title="高阶待机（游戏内需好感度 10 解锁，画廊已全解锁）">待机<i class="ia-tier">高阶</i></button>
       <button class="ia-btn toggle" id="ia-love" title="切换触摸时是否用好感版">♡</button>
       <button class="ia-btn toggle on" id="ia-lip" title="语音播放时口型同步">口型</button>
       <button class="ia-btn" id="ia-extras" title="显示/隐藏大件配件（acc）">配件</button>
@@ -954,8 +974,15 @@ function playAnim(pl, anims, name){
 //   2) 否则按语义映射（idle→cover_idle/aim_idle、action→cover_reload 等）
 //   3) 把新动画 seek 到相同相位（用 trackTime = 相位 × 新动画时长）
 //
-// 注意：三个姿态的 idle 动画时长不同（fb idle 3.33s / cover_idle 2.0s /
-// aim_idle 2.0s），所以要用【归一化相位】而不是绝对秒数，否则会越界。
+// 注意：idle 动画时长【因角色而异】，不能写死。
+// 实测（2026-11-11，4 个角色抽样）：
+//        fb idle   cover_idle  aim_idle
+//   c010  3.3333s   2.0000s     2.0000s
+//   c140  4.5000s   3.3333s     1.6667s
+//   c080  2.6667s   2.0000s     1.6667s
+//   c521  4.0000s   2.0000s     2.0000s
+// 所以必须用【归一化相位】（trackTime / duration）而不是绝对秒数，
+// 否则从 fb(4.5s) 切到 aim(1.6667s) 时 3 秒会直接越界。
 let poseHandoff = null;   // {fromPose, anim, phase, ts}
 
 // 记录切换前的动画状态（在 disposePlayer 之前调用）
