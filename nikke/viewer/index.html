@@ -1280,9 +1280,15 @@ const SPEED_PRESETS = [0.1, 0.25, 0.5, 1, 1.5, 2];
 function applyPlaybackSpeed(pl, v){
   if(!pl) return false;
   try{
-    pl.animationState.timeScale = v;
-    // 有些版本用 player.speed 字段驱动渲染循环
-    if(typeof v === 'number') pl.speed = v;
+    // ⚠️ 只写 pl.speed，不要同时写 animationState.timeScale！
+    // 实测：两者都会乘进渲染循环的 delta，双写会变成【平方减速】：
+    //   只 timeScale=0.5 → 1s 推进 0.508 (正确)
+    //   只 speed=0.5     → 1s 推进 0.500 (正确)
+    //   双写 0.5/0.5     → 1s 推进 0.250 (0.25x，慢了一倍)
+    // 0.1x 双写会变成 0.01x，几乎静止。
+    // pl.speed 是 spine-player 的官方速度字段，且 player 重建后仍由本函数重设；
+    // timeScale 保留给 timeline scrub / 定格等模块独立使用。
+    pl.speed = v;
     return true;
   }catch(e){ return false; }
 }

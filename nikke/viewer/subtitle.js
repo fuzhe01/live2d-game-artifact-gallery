@@ -173,12 +173,20 @@ class SubtitleBubble {
       const sx = (ndcX * 0.5 + 0.5) * (canvas.width || 1);
       const sy = (1 - (ndcY * 0.5 + 0.5)) * (canvas.height || 1);
 
-      const rect = canvas.getBoundingClientRect();
-      const scaleX = rect.width / (canvas.width || rect.width || 1);
-      const scaleY = rect.height / (canvas.height || rect.height || 1);
+      // ⚠️ 不能用 canvas.getBoundingClientRect() 当定位基准：
+      // §6.5 的旋转/镜像会给 #player-container 加 CSS transform，
+      // rect 会跟着旋转/缩放，导致气泡跳位（实测旋转90° 时 top 238→98）。
+      // 正确做法：用 stage-view 的 rect（它【不】被变换）+ canvas 的
+      // 内部像素尺寸做缩放。canvas 是铺满 stage 的（inset:0），
+      // 所以 stage 的尺寸就等于「未变换时」的画布 CSS 尺寸。
+      const stage = document.getElementById('stage-view');
+      const base = stage ? stage.getBoundingClientRect() : null;
+      if (!base) return;
+      const scaleX = base.width / (canvas.width || base.width || 1);
+      const scaleY = base.height / (canvas.height || base.height || 1);
 
-      const px = rect.left + sx * scaleX + this.offsetX;
-      const py = rect.top + sy * scaleY + this.offsetY;
+      const px = base.left + sx * scaleX + this.offsetX;
+      const py = base.top + sy * scaleY + this.offsetY;
 
       this.el.style.left = Math.round(px) + 'px';
       this.el.style.top = Math.round(py) + 'px';
