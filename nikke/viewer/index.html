@@ -86,7 +86,9 @@
 
   #stage-view{height:calc(100vh - var(--header-h)); position:relative; display:none}
   .back-btn{
-    position:absolute; top:1.2rem; left:1.4rem; z-index:8;
+    /* z-index 19：必须高于皮肤对比面板（.sc-panel z-index:18），
+       否则对比模式下「返回列表」被面板完全遮挡，真实点击不可达。 */
+    position:absolute; top:1.2rem; left:1.4rem; z-index:19;
     font-family:var(--mono); font-size:.78rem; letter-spacing:.06em;
     background:rgba(42,22,32,.82); border:1px solid var(--line); color:var(--foam);
     padding:.5rem .9rem; border-radius:4px; cursor:pointer; backdrop-filter:blur(6px); transition:.15s;
@@ -626,7 +628,9 @@
   .sc-panel.on{display:flex}
   .sc-head{
     display:flex; align-items:center; gap:.7rem; flex:none;
-    padding:.6rem 1rem; border-bottom:1px solid var(--line);
+    /* 左侧留出 #back 按钮的空间：对比面板 z-index 18 会盖住 back-btn，
+       .back-btn 的 z-index 提到 19 后能点，这里再加 padding 避免视觉重叠 */
+    padding:.6rem 1rem .6rem 8.2rem; border-bottom:1px solid var(--line);
   }
   .sc-title{font-family:var(--mono); font-size:.78rem; letter-spacing:.08em; color:var(--accent-lit)}
   .sc-count{font-family:var(--mono); font-size:.62rem; color:var(--foam); opacity:.8}
@@ -1399,8 +1403,10 @@ function exportScreenshot(){
   const pl = interaction && interaction.player;
   if(!pl || !pl.canvas){ setIaStatus('截图失败：没有可导出的画布'); return null; }
   const src = pl.canvas;
-  const bg = (document.getElementById('shot-bg') || {}).value || 'dark';
-  const scale = parseFloat((document.getElementById('shot-scale') || {}).value || '1');
+  const bgEl = document.getElementById('shot-bg');
+  const scaleEl = document.getElementById('shot-scale');
+  const bg = bgEl ? bgEl.value : 'dark';
+  const scale = scaleEl ? parseFloat(scaleEl.value) : 1;
 
   try{
     const w = Math.round(src.width * scale);
@@ -1709,6 +1715,8 @@ function initInteraction(){
       if (!c) return;
       const active = await skinCompare.toggle(c.id, current.pose);
       scBtn.classList.toggle('on', !!active);
+      // 打开对比后把全局播放速度同步过去（SkinCompare 内部初值是 1）
+      if (active) skinCompare.setSpeed(playbackSpeed);
     };
   }
 

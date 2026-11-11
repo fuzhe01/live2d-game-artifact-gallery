@@ -192,7 +192,9 @@ class SkinCompare {
         const anims = pl.animationState.data.skeletonData.animations.map(a => a.name);
         this.players.push({ cid: c.id, containerId: cid, player: pl,
                             anims, info, charName: c.name || c.id });
-        pl.animationState.timeScale = this.speed;
+        // 与主播放器同一机制：只写 speed，timeScale 恒 1
+        pl.speed = this.speed;
+        pl.animationState.timeScale = 1;
         if (state) state.textContent = `${anims.length} 个动画`;
         okCount++;
       } catch (e) {
@@ -234,6 +236,19 @@ class SkinCompare {
       document.querySelectorAll('.' + cls).forEach(el => el.classList.remove('on'));
     }
     if (window.__sub) window.__sub.hide();
+
+    // 暂停主 player：display:none 会让它的 canvas resize 成 0×0，
+    // 但 spine-player 的渲染循环仍在跑（实测 600ms 内 trackTime +0.573），
+    // 白白占用一个 WebGL 上下文和 RAF 回调。这里显式暂停，退出时恢复。
+    this._mainWasPaused = null;
+    try {
+      const mp = (window.__ia && window.__ia.player) || null;
+      if (mp) {
+        this._mainPlayerRef = mp;
+        this._mainWasPaused = !!mp.paused;
+        mp.paused = true;
+      }
+    } catch (e) {}
   }
 
   _restoreMainStage() {
@@ -241,6 +256,13 @@ class SkinCompare {
       for (const { el, display } of this._hidden) el.style.display = display;
       this._hidden = null;
     }
+    // 恢复主 player 的播放状态（_hideMainStage 里可能暂停过）
+    try {
+      const mp = this._mainPlayerRef;
+      if (mp && this._mainWasPaused === false) mp.paused = false;
+    } catch (e) {}
+    this._mainPlayerRef = null;
+    this._mainWasPaused = null;
   }
 
   /** 同步动画按钮 */
@@ -279,7 +301,8 @@ class SkinCompare {
       if (!p.anims.includes(name)) continue;
       try {
         p.player.animationState.setAnimation(0, name, /idle|stand|wait|loop/i.test(name));
-        p.player.animationState.timeScale = this.speed;
+        p.player.speed = this.speed;            // 与主播放器同一机制
+        p.player.animationState.timeScale = 1;  // 恒 1，避免平方减速
         p.player.play();
         applied++;
       } catch (e) {}
@@ -291,11 +314,22 @@ class SkinCompare {
     return applied;
   }
 
-  /** 设置所有 player 播放速度 */
+  /**
+   * 设置所有 player 播放速度。
+   *
+   * ⚠️ 必须与主播放器用同一机制：只写 `player.speed`，`timeScale` 恒 1。
+   * 实测 pl.speed 与 animationState.timeScale 都会乘进渲染 delta，
+   * 双写会平方减速（0.5×0.5=0.25）。
+   * 早期版本这里只写 timeScale，导致主 player 用 speed、对比 player 用
+   * timeScale，两套机制分裂，对比中调速度不生效或不一致。
+   */
   setSpeed(v) {
     this.speed = v;
     for (const p of this.players) {
-      try { p.player.animationState.timeScale = v; } catch (e) {}
+      try {
+        p.player.speed = v;
+        p.player.animationState.timeScale = 1;
+      } catch (e) {}
     }
   }
 
@@ -310,6 +344,10 @@ class SkinCompare {
     this.players = [];
     if (this.panel) this.panel.classList.remove('on');
     this._restoreMainStage();
+    // 同步入口按钮高亮：不管是点面板里的「✕ 退出对比」还是 exitStage()，
+    // 都必须清掉 #ia-skin-compare 的 on 类，否则按钮会一直显示激活态。
+    const btn = document.getElementById('ia-skin-compare');
+    if (btn) btn.classList.remove('on');
     this.onStatus('已退出皮肤对比');
   }
 
