@@ -38,6 +38,15 @@
   通过父角色继承，其余 120 个是量产型/Boss（游戏内本就无台词），界面明确提示。
 - **占位资源**：c967/c968/c969 贴图全黑、c999 是游戏内置灰色 dummy 人偶，
   列表用占位图标标注「资源未实装 / 游戏内置测试模型」。
+- **插画分类（⑦，2026-11-13 改为直接采用 Nikke-db 体系）**：
+  不再从资源 id 机械截取分组，改为搬用 Nikke-db Gallery 的
+  **Story / Events / Other** 三桶 + 它的 88 组 title
+  （`scripts/names/nikkedb_gallery.json`），并用 `ArchiveEventStoryTable`
+  的 16 条游戏内活动短名兜底（`bow-wowparadise`、`acpufreeze` 等）。
+  实测分布：Story 27 / Events 65 / Other 79 / 角色 525。
+  说明：Nikke-db 的 88 个分类标题**全部英文、无中文**，游戏数据里也没有
+  活动中文名（全库严格 UTF-8 扫描只剩玩家昵称），所以中文只覆盖角色名（439 个）。
+  Nikke-db 的 Side Stories 桶在我们客户端无对应资源，故未设该导航。
 - **交互（2026-11-12 重构）**：
   * 列表按 `baseId` 合并同角色多套服装（696 → 495 组），卡片显示「N 套」，
     详情页 `#skin-tabs` 可切换并保留当前姿态；搜索时自动逐套展开

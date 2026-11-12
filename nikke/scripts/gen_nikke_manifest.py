@@ -216,6 +216,128 @@ def categorize(cid):
     return "misc"
 
 
+def load_gallery_index():
+    """加载 Nikke-db Gallery 分类索引 + 游戏内活动短名，用于替代机械派生分组。
+
+    数据源（随仓库提交，clone 可重建）：
+      names/nikkedb_gallery.json  —— Nikke-db Gallery 88 组（id/title/items/bucket）
+      names/event_short_names.json —— ArchiveEventStoryTable 提取的 16 条活动短名
+
+    返回 (by_gid, by_norm, by_story, short_names)：
+      by_gid      : 规范化 gallery id → (bucket, title)
+      by_norm     : 规范化资源名     → (bucket, title)
+      by_story    : 'NNNN' 章节键    → (bucket, title)
+      short_names : 游戏内部名 → 显示短名（bowwowparadise → bow-wowparadise）
+    """
+    by_gid, by_norm, by_story = {}, {}, {}
+    story_ranges = []      # [(lo, hi, (bucket, title))] 从 title 解析章节区间
+    short_names = {}
+
+    gal_path = os.path.join(os.path.dirname(__file__), "names", "ikkedb_gallery.json")
+    if not os.path.exists(gal_path):
+        gal_path = os.path.join(os.path.dirname(__file__), "names", "nikkedb_gallery.json")
+    if os.path.exists(gal_path):
+        try:
+            gal = json.load(open(gal_path, encoding="utf-8")).get("gallery") or []
+            for g in gal:
+                key = (g.get("bucket"), g.get("title"))
+                gid = g.get("id") or (g.get("file") or "").replace(".json", "")
+                if gid:
+                    by_gid.setdefault(_norm(gid), key)
+                for it in g.get("items") or []:
+                    by_norm.setdefault(_norm(it), key)
+                if g.get("bucket") == "Story":
+                    for it in g.get("items") or []:
+                        m = re.search(r"(?:Main|Chap|Story)_?(\d{2})_(\d{2})", it or "", re.I)
+                        if m:
+                            by_story.setdefault(m.group(1) + m.group(2), key)
+                    # 解析 title 里的章节区间："Chapters 0 to 9" / "Chapter 43 to 44"
+                    nums = [int(x) for x in re.findall(r"\d+", g.get("title") or "")]
+                    if len(nums) >= 2:
+                        story_ranges.append((min(nums[0], nums[1]),
+                                             max(nums[0], nums[1]), key))
+            print(f"  Gallery 分类 {len(gal)} 组（Story 区间 {len(story_ranges)} 段）")
+        except Exception as ex:
+            print(f"  [warn] 读取 Gallery 索引失败: {ex}")
+
+    sh_path = os.path.join(os.path.dirname(__file__), "names", "event_short_names.json")
+    if os.path.exists(sh_path):
+        try:
+            short_names = json.load(open(sh_path, encoding="utf-8"))
+        except Exception:
+            pass
+    return by_gid, by_norm, by_story, short_names, story_ranges
+
+
+def _norm(s):
+    return re.sub(r"[^a-z0-9]", "", (s or "").lower())
+
+
+def gallery_of(cid, idx):
+    """给一个 cid 找它所属的 Nikke-db Gallery 分组 → (bucket, title)。
+
+    匹配顺序：
+      1. storyNNNN           → 先按精确 item 命中，再按 title 的章节区间归类
+      2. eventscene_xxx_NN   → 用活动名 xxx 查 gallery id（含前缀放宽）
+      3. 整 id               → 查 gallery id（777 / bluewaterisland …）
+      4. 规范化资源名
+    匹配不上返回 (None, None)，前端归入「其它」。
+    """
+    by_gid, by_norm, by_story, short_names, story_ranges = idx
+    hit = None
+
+    m = re.match(r"^story(\d{4})", cid)
+    if m:
+        hit = by_story.get(m.group(1))
+        if not hit:
+            # 按章节区间归类（story1 = "Chapters 0 to 9" 覆盖 00~09）
+            try:
+                ch = int(m.group(1)[:2])
+            except ValueError:
+                ch = None
+            if ch is not None:
+                for lo, hi, key in story_ranges:
+                    if lo <= ch <= hi:
+                        hit = key
+                        break
+
+    if not hit and cid.startswith("eventscene_"):
+        base = re.sub(r"_\d+$", "", cid[len("eventscene_"):])
+        hit = by_gid.get(_norm(base))
+        if not hit:
+            nb = _norm(base)
+            for k, key in by_gid.items():
+                if len(k) >= 4 and (k.startswith(nb) or nb.startswith(k)):
+                    hit = key
+                    break
+        # 游戏内短名反查（freezeacpu → acpufreeze 之类）
+        if not hit:
+            for k, v in short_names.items():
+                if _norm(v) == _norm(base) or _norm(k) == _norm(base):
+                    # 用短名再试一次 gallery id
+                    hit = by_gid.get(_norm(v))
+                    if hit:
+                        break
+
+    if not hit:
+        hit = by_gid.get(_norm(cid))
+    if not hit:
+        hit = by_norm.get(_norm(cid))
+    if not hit and cid.startswith("eventscene_"):
+        hit = by_norm.get(_norm(cid[len("eventscene_"):]))
+
+    # 兜底：Nikke-db 未收录、但游戏 ArchiveEventStoryTable 里有正式短名的活动，
+    # 仍归入 Events 桶，title 用游戏内短名（bow-wowparadise / acpufreeze …），
+    # 避免把它们和被丢进 Other 的 Q版/标题图混在一起。
+    if not hit and cid.startswith("eventscene_"):
+        base = _norm(re.sub(r"_\d+$", "", cid[len("eventscene_"):]))
+        for k, v in short_names.items():
+            if base and (_norm(k) == base or _norm(v) == base):
+                return ("Events", v)
+
+    return hit if hit else (None, None)
+
+
 def cover_url(cid, pose_info):
     """封面优先用渲染好的头像图标 _icon.png；否则退回姿态首张贴图（可能是碎片 atlas）。"""
     icon = os.path.join(C.DATA_DIR, cid, "_icon.png")
@@ -230,6 +352,7 @@ def cover_url(cid, pose_info):
 
 def main():
     db = load_char_db()
+    gallery_idx = load_gallery_index()
     chars = []
     if not os.path.isdir(C.DATA_DIR):
         print("无 data 目录")
@@ -277,15 +400,16 @@ def main():
         # ⑦ 借鉴 nikke-db gallery 的插画分类：给活动/剧情加副分类，
         #   便于按活动名 / 章节号筛选（不改主分类）。
         cat = rec["category"]
-        if cid.startswith("eventscene_"):
-            rest = cid[len("eventscene_"):]
-            # 去掉尾部 _NN 编号，剩下就是活动名
-            m = re.match(r"^(.*?)_?\d{2}$", rest)
-            rec["eventGroup"] = (m.group(1) if m else rest).strip("_")
-        elif cid.startswith("eventtitle_"):
-            rec["eventGroup"] = cid[len("eventtitle_"):].rstrip("_0123456789")
-        elif re.match(r"^story\d{4}", cid):
-            rec["chapter"] = cid[5:7]
+        # ⑦ Gallery 分类：直接采用 Nikke-db 的 gallery 分类体系
+        #    （Story / SideStories / Events / Other + 它的 title），
+        #    不再自己从 id 机械截取 eventGroup / chapter。
+        #    character 不进 gallery 分类（那是角色库，对应 nikke-db 的 visualiser）；
+        #    非 character 且未命中 Gallery 的归入 Other，与 nikke-db 的 Other 桶一致。
+        if rec["category"] != "character":
+            gb, gt = gallery_of(cid, gallery_idx)
+            rec["galleryBucket"] = gb or "Other"
+            if gt:
+                rec["galleryTitle"] = gt
         chars.append(rec)
 
     os.makedirs(C.VIEWER_DIR, exist_ok=True)
