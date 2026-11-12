@@ -877,9 +877,9 @@
   <nav class="nav-tabs" id="nav-tabs">
     <button class="on" data-cat="all">全部</button>
     <button data-cat="character">角色</button>
-    <button data-cat="g:Story">Story</button>
-    <button data-cat="g:Events">Events</button>
-    <button data-cat="g:Other">Other</button>
+    <button data-cat="event">活动</button>
+    <button data-cat="story">剧情</button>
+    <button data-cat="misc">其它</button>
     <button data-cat="fav" id="nav-fav">⭐ 收藏</button>
   </nav>
 </header>
@@ -2019,8 +2019,7 @@ function setupCardColumns(){
   applyCardColumns(saved);
 }
 
-const CAT_NOUN = { all:'条目', character:'角色', fav:'收藏',
-    'g:Story':'Story', 'g:Events':'Events', 'g:Other':'Other' };
+const CAT_NOUN = { all:'条目', character:'角色', event:'活动', story:'剧情', misc:'其它', fav:'收藏' };
 
 // ═══ §8 最爱收藏系统 ═════════════════════════════════════════
 // localStorage 存 id 数组；收藏分类 tab 走 applyFilters 的 ui.cat==='fav'。
@@ -2061,16 +2060,14 @@ function updateFavBadge(){
 
 function applyFilters(){
   let items = manifest.characters;
-  // ⑦ 分类：直接采用 Nikke-db Gallery 体系
-  //   all / character 走原 category；g:Story / g:Events / g:Other 走 galleryBucket
   if(ui.cat === 'fav') items = items.filter(c => favorites.has(c.id));
-  else if(ui.cat === 'character') items = items.filter(c => (c.category||'') === 'character');
-  else if(ui.cat.startsWith('g:')) items = items.filter(c => c.galleryBucket === ui.cat.slice(2));
+  else if(ui.cat !== 'all') items = items.filter(c => (c.category||'misc') === ui.cat);
   if(ui.pose) items = items.filter(c => c.poses && c.poses[ui.pose]);
   if(ui.ver)  items = items.filter(c => String(c.version) === ui.ver);
-  // 副筛选：Nikke-db 的 gallery 分组标题
+  // ⑦ 活动 / 章节副分类筛选
   if(ui.sub){
-    items = items.filter(c => (c.galleryTitle || '') === ui.sub);
+    items = items.filter(c =>
+      (c.eventGroup || '') === ui.sub || (c.chapter || '') === ui.sub);
   }
   if(ui.q){
     const q = ui.q;
@@ -2086,10 +2083,8 @@ function applyFilters(){
   // ⚠️ 默认排序原来只按 id 字母序，导致 777 / bluewaterisland / bowwowparadise
   // 这类活动 key（数字和小写字母开头）排在 c010 等角色立绘【前面】，
   // 用户看到的就是「三张长镜头插在角色列表最前面」。
-  // 排序优先级：角色 → Story → Events → Other。
-  // 用 galleryBucket 判定（⑦ 采用 Nikke-db 体系后 category 只区分角色/非角色）。
-  const CAT_RANK = { character: 0, Story: 1, Events: 2, Other: 3 };
-  const catRank = c => (c.category === 'character' ? 0 : (CAT_RANK[c.galleryBucket] ?? 3));
+  const CAT_RANK = { character: 0, event: 1, story: 2, misc: 3 };
+  const catRank = c => (CAT_RANK[c.category] ?? 9);
   if(ui.sort === 'name') items.sort((a,b)=>{
     const d = catRank(a) - catRank(b);
     return d !== 0 ? d : a.name.localeCompare(b.name);
@@ -2199,19 +2194,18 @@ function buildGrid(){
       reset();
     };
   });
-  // ⑦ 副分类下拉：直接列出 Nikke-db 的 Gallery 分组标题
+  // ⑦ 活动 / 章节副分类下拉（只在 event / story 分类下出现）
   function buildSubFilter(){
     const sel = document.getElementById('filter-sub');
     if(!sel) return;
-    if(!ui.cat.startsWith('g:')){ sel.style.display = 'none'; sel.innerHTML = ''; ui.sub = ''; return; }
-    const bucket = ui.cat.slice(2);
+    const key = ui.cat === 'event' ? 'eventGroup' : (ui.cat === 'story' ? 'chapter' : null);
+    if(!key){ sel.style.display = 'none'; sel.innerHTML = ''; ui.sub = ''; return; }
     const vals = [...new Set(manifest.characters
-      .filter(c => c.galleryBucket === bucket && c.galleryTitle)
-      .map(c => c.galleryTitle))].sort();
-    if(!vals.length){ sel.style.display = 'none'; sel.innerHTML = ''; ui.sub = ''; return; }
-    sel.innerHTML = `<option value="">全部 ${bucket} (${vals.length})</option>` +
-      vals.map(v => `<option value="${v.replace(/"/g,'&quot;')}">${v}</option>`).join('');
-    sel.style.display = '';
+      .filter(c => c.category === ui.cat && c[key])
+      .map(c => c[key]))].sort();
+    sel.innerHTML = `<option value="">全部${ui.cat === 'event' ? '活动' : '章节'} (${vals.length})</option>` +
+      vals.map(v => `<option value="${v}">${v}</option>`).join('');
+    sel.style.display = vals.length ? '' : 'none';
   }
   const subSel = document.getElementById('filter-sub');
   if(subSel) subSel.onchange = e => { ui.sub = e.target.value; reset(); };
