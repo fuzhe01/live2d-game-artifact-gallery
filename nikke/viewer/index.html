@@ -288,6 +288,59 @@
   }
   .ia-tools.open{ display:flex; flex-wrap:wrap; }
   .ia-btn.tool-toggle.on{ background:var(--accent); color:var(--abyss); border-color:var(--accent); }
+  /* ── 🖼 Gallery（剧情插画）──────────────────────────────── */
+  #gallery-view{ display:none; padding-bottom:3rem; }
+  .gal-grid{
+    display:grid; gap:.8rem; padding:0 1.4rem 2rem;
+    grid-template-columns:repeat(auto-fill, minmax(210px, 1fr));
+  }
+  .gal-cell{
+    position:relative; border:1px solid var(--line); border-radius:6px;
+    overflow:hidden; background:rgba(255,255,255,.02); cursor:zoom-in;
+    transition:border-color .15s, transform .15s;
+  }
+  .gal-cell:hover{ border-color:var(--accent); transform:translateY(-2px); }
+  .gal-cell img{ display:block; width:100%; aspect-ratio:1/1; object-fit:cover; }
+  .gal-cell .gal-name{
+    font-family:var(--mono); font-size:.6rem; color:var(--foam);
+    padding:.35rem .45rem; border-top:1px solid var(--line);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .gal-empty{
+    padding:4rem 2rem; text-align:center; color:var(--foam);
+    font-family:var(--mono); font-size:.8rem; line-height:1.8;
+  }
+  .gal-empty code{ color:var(--accent-lit); }
+  .gal-lightbox{
+    position:fixed; inset:0; z-index:80; display:none;
+    background:rgba(8,4,8,.96); backdrop-filter:blur(6px);
+    flex-direction:column;
+  }
+  .gal-lightbox.on{ display:flex; }
+  .gal-lb-bar{
+    flex:none; display:flex; align-items:center; gap:.8rem;
+    padding:.6rem 1rem; border-bottom:1px solid var(--line);
+    font-family:var(--mono); font-size:.72rem; color:var(--ivory);
+  }
+  .gal-lb-bar #gal-lb-title{ font-weight:600; }
+  .gal-lb-bar #gal-lb-meta{ color:var(--foam); opacity:.7; font-size:.64rem; }
+  .gal-lb-bar a{
+    margin-left:auto; color:var(--accent-lit); text-decoration:none;
+    border:1px solid var(--line-lit); padding:.2rem .5rem; border-radius:4px;
+  }
+  .gal-lb-bar a:hover{ border-color:var(--accent); }
+  .gal-lb-bar button{
+    font-family:var(--mono); font-size:.8rem; background:none; border:none;
+    color:var(--foam); cursor:pointer; padding:.2rem .4rem;
+  }
+  .gal-lb-bar button:hover{ color:var(--accent-lit); }
+  #gal-lb-img{
+    flex:1; min-height:0; width:100%; object-fit:contain; padding:1rem;
+  }
+  @media(max-width:720px){
+    .gal-grid{ grid-template-columns:repeat(auto-fill, minmax(130px, 1fr)); padding:0 .6rem 2rem; }
+  }
+
   .ia-status{
     font-family:var(--mono); font-size:.66rem; color:var(--foam);
     letter-spacing:.03em; opacity:.85; margin-left:.3rem;
@@ -880,6 +933,7 @@
     <button data-cat="event">活动</button>
     <button data-cat="story">剧情</button>
     <button data-cat="misc">其它</button>
+    <button data-cat="gallery" id="nav-gallery">🖼 Gallery</button>
     <button data-cat="fav" id="nav-fav">⭐ 收藏</button>
   </nav>
 </header>
@@ -916,6 +970,37 @@
     </div>
     <div class="grid" id="grid"></div>
     <div id="sentinel" style="height:40px"></div>
+  </div>
+
+  <!-- 🖼 Gallery：游戏内剧情插画（scenariobackground），与 nikke-db gallery 内容一致 -->
+  <div id="gallery-view">
+    <div class="gallery-head">
+      <h2>NIKKE · 剧情插画</h2>
+      <span id="gal-count">— 张</span>
+      <div class="controls">
+        <select class="sortsel" id="gal-group" title="按活动分组筛选"></select>
+        <select class="sortsel" id="gal-sort" title="排序">
+          <option value="name">名称 A→Z</option>
+          <option value="group">按活动</option>
+        </select>
+        <input class="search" id="gal-search" placeholder="搜索插画名…" autocomplete="off" style="max-width:220px">
+      </div>
+    </div>
+    <div class="gal-grid" id="gal-grid"></div>
+    <div id="gal-empty" class="gal-empty" style="display:none">
+      还没有插画资源。先运行 <code>10-tool/extract_all_bg.py</code> 从游戏解包。
+    </div>
+  </div>
+
+  <!-- 插画大图遮罩 -->
+  <div id="gal-lightbox" class="gal-lightbox">
+    <div class="gal-lb-bar">
+      <span id="gal-lb-title"></span>
+      <span id="gal-lb-meta"></span>
+      <a id="gal-lb-download" download>下载</a>
+      <button id="gal-lb-close">✕</button>
+    </div>
+    <img id="gal-lb-img" alt="">
   </div>
 
   <div id="stage-view">
@@ -1997,6 +2082,12 @@ async function boot(){
   document.getElementById('back').onclick = exitStage;
   initInteraction();
   initSkinCompare();   // 让 window.__sc 始终可用（对比模式入口）
+  initGallery();       // 🖼 Gallery 控件
+  // URL 直达：#gallery 或 ?view=gallery
+  if(location.hash === '#gallery' || /[?&]view=gallery/.test(location.search)){
+    const gb = document.getElementById('nav-gallery');
+    if(gb){ gb.click(); }
+  }
 }
 
 function applyCardColumns(value){
@@ -2190,6 +2281,9 @@ function buildGrid(){
       document.querySelectorAll('#nav-tabs button').forEach(b=>b.classList.remove('on'));
       btn.classList.add('on');
       ui.cat = btn.dataset.cat; ui.sub = '';
+      // 🖼 Gallery 是独立视图，不走角色列表
+      if(ui.cat === 'gallery'){ showGallery(); return; }
+      hideGallery();
       buildSubFilter();
       reset();
     };
@@ -2538,6 +2632,157 @@ function waitForSize(id){
       else requestAnimationFrame(check);
     };
     requestAnimationFrame(check);
+  });
+}
+
+// ==================== 🖼 Gallery（剧情插画）====================
+// 数据来自游戏内 scenariobackground(hd) 解包：
+//   data/gallery/manifest.json  { count, items:[{name,file,w,h,group,title}] }
+let galData = null;          // {items:[...], groups:[...]}
+let galReady = false;
+
+async function loadGalleryData(){
+  if(galReady) return galData;
+  galReady = true;
+  try{
+    const r = await fetch('../data/gallery/manifest.json');
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    galData = await r.json();
+  }catch(e){
+    galData = {count:0, items:[], groups:[]};
+  }
+  return galData;
+}
+
+function showGallery(){
+  document.getElementById('grid-view').style.display = 'none';
+  document.getElementById('stage-view').style.display = 'none';
+  document.getElementById('gallery-view').style.display = 'block';
+  window.scrollTo(0, 0);
+  renderGallery();
+}
+
+function hideGallery(){
+  document.getElementById('gallery-view').style.display = 'none';
+  // 回到角色列表时必须把 grid-view 显式恢复，否则列表区一直是隐藏的
+  document.getElementById('grid-view').style.display = 'block';
+}
+
+async function renderGallery(){
+  const grid = document.getElementById('gal-grid');
+  const empty = document.getElementById('gal-empty');
+  const cntEl = document.getElementById('gal-count');
+  const gsel = document.getElementById('gal-group');
+  if(!grid) return;
+
+  const data = await loadGalleryData();
+  if(!data.items.length){
+    grid.innerHTML = '';
+    empty.style.display = 'block';
+    if(cntEl) cntEl.textContent = '0 张';
+    if(gsel) gsel.innerHTML = '';
+    return;
+  }
+  empty.style.display = 'none';
+
+  // 分组下拉（只建一次）
+  if(gsel && gsel.options.length <= 1){
+    const groups = data.groups && data.groups.length
+      ? data.groups
+      : [...new Set(data.items.map(x => x.group || '其它'))]
+          .sort().map(g => ({id:g, title:g, count:data.items.filter(x => (x.group||'其它')===g).length}));
+    gsel.innerHTML = `<option value="">全部活动 (${groups.length})</option>` +
+      groups.map(g => `<option value="${g.id}">${g.title} (${g.count})</option>`).join('');
+    gsel.onchange = () => renderGallery();
+  }
+
+  const wantGroup = gsel ? gsel.value : '';
+  const q = (document.getElementById('gal-search').value || '').trim().toLowerCase();
+  const sortMode = document.getElementById('gal-sort').value || 'name';
+
+  let items = data.items.slice();
+  if(wantGroup) items = items.filter(x => (x.group || '其它') === wantGroup);
+  if(q) items = items.filter(x =>
+    x.name.toLowerCase().includes(q) ||
+    (x.title || '').toLowerCase().includes(q));
+
+  if(sortMode === 'group'){
+    items.sort((a,b) => {
+      const g = (a.group||'').localeCompare(b.group||'');
+      return g !== 0 ? g : a.name.localeCompare(b.name);
+    });
+  }else{
+    items.sort((a,b) => a.name.localeCompare(b.name));
+  }
+
+  if(cntEl) cntEl.textContent = `${items.length} 张`;
+  grid.innerHTML = '';
+  // 分批渲染，避免 1200+ 节点一次性插入卡顿
+  const PAGE = 80;
+  let shown = 0;
+  const append = () => {
+    const frag = document.createDocumentFragment();
+    items.slice(shown, shown + PAGE).forEach(it => {
+      const cell = document.createElement('div');
+      cell.className = 'gal-cell';
+      cell.innerHTML =
+        `<img loading="lazy" src="../data/gallery/${it.file}" alt="${it.title || it.name}">` +
+        `<div class="gal-name">${it.title || it.name}</div>`;
+      cell.onclick = () => openLightbox(it);
+      frag.appendChild(cell);
+    });
+    grid.appendChild(frag);
+    shown += Math.min(PAGE, items.length - shown);
+  };
+  append();
+  // 滚动追加
+  const onScroll = () => {
+    if(shown >= items.length){ window.removeEventListener('scroll', onScroll); return; }
+    if(window.innerHeight + window.scrollY >= document.body.scrollHeight - 600){
+      append();
+    }
+  };
+  window.removeEventListener('scroll', onScroll);
+  window.addEventListener('scroll', onScroll);
+}
+
+function openLightbox(it){
+  const lb = document.getElementById('gal-lightbox');
+  const img = document.getElementById('gal-lb-img');
+  const title = document.getElementById('gal-lb-title');
+  const meta = document.getElementById('gal-lb-meta');
+  const dl = document.getElementById('gal-lb-download');
+  const src = `../data/gallery/${it.file}`;
+  img.src = src;
+  title.textContent = it.title || it.name;
+  meta.textContent = `${it.w || '?'}×${it.h || '?'} · ${it.name}`;
+  if(dl){ dl.href = src; dl.download = it.file; }
+  lb.classList.add('on');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeLightbox(){
+  const lb = document.getElementById('gal-lightbox');
+  lb.classList.remove('on');
+  document.body.style.overflow = '';
+}
+
+// 绑定 Gallery 控件（一次性）
+function initGallery(){
+  const gsel = document.getElementById('gal-group');
+  const gsort = document.getElementById('gal-sort');
+  const gsearch = document.getElementById('gal-search');
+  const gclose = document.getElementById('gal-lb-close');
+  const lb = document.getElementById('gal-lightbox');
+  if(gsort) gsort.onchange = () => renderGallery();
+  if(gsearch){
+    let t;
+    gsearch.oninput = () => { clearTimeout(t); t = setTimeout(renderGallery, 200); };
+  }
+  if(gclose) gclose.onclick = closeLightbox;
+  if(lb) lb.onclick = (e) => { if(e.target === lb) closeLightbox(); };
+  document.addEventListener('keydown', (e) => {
+    if(e.key === 'Escape') closeLightbox();
   });
 }
 
