@@ -1915,14 +1915,8 @@ function initInteraction(){
       if (dx > 6 || dy > 6 || dt > 500) return;
       const c = manifest.characters[current.idx];
       if(!c) return;
-      // ⑥ 游戏式交互：cover 点击 → 探身切到 aim；aim 点击 → 开火。
-      // 用当前 viewer 姿态（current.pose）判断，不用 __ia.currentPose。
-      if(current.pose === 'cover' && c.poses.aim){
-        if(switchPose('aim')){
-          setIaStatus('▶ 探身瞄准（移动鼠标瞄准 · 点击开火）');
-          return;
-        }
-      }
+      // ⑥ 瞄准点击 → 开火/停火。（半身点击切瞄准已按用户要求移除：
+      //    cover 姿态下点击仍走普通触摸台词，姿态只由顶部 tab 切换。）
       if(current.pose === 'aim'){
         // ⚠️ 审核实测：未点过「姿态动作」时 poseActions 为 null，画布点击
         //    只会切姿态、不会开火。这里按需初始化，让游戏式交互自足。
