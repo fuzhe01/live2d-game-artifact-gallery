@@ -932,11 +932,7 @@
       <button class="ia-btn" id="ia-pose-act" title="当前姿态专属动作（换弹/开火/瞄准）">姿态动作</button>
       <button class="ia-btn tool-toggle" id="ia-tools" title="展开/收起调试与导出工具">⚙ 工具</button>
       <div class="ia-tools" id="ia-tools-row">
-        <button class="ia-btn ia-tier-hi" data-kind="touch_love"
-                title="高阶触摸（游戏内需好感度 10 解锁）">摸摸<i class="ia-tier">高阶</i></button>
-        <button class="ia-btn ia-tier-hi" data-kind="stay_love"
-                title="高阶待机（游戏内需好感度 10 解锁）">待机<i class="ia-tier">高阶</i></button>
-        <button class="ia-btn toggle" id="ia-love" title="切换触摸时是否用好感版">♡</button>
+        <button class="ia-btn toggle" id="ia-love" title="好感模式：开启后「摸摸/待机」使用高阶台词（游戏内需好感度 10）">♡ 好感</button>
         <button class="ia-btn toggle on" id="ia-lip" title="语音播放时口型同步">口型</button>
         <button class="ia-btn" id="ia-extras" title="显示/隐藏大件配件（acc）">配件</button>
         <button class="ia-btn" id="ia-timeline" title="时间轴定格/逐帧">时间轴</button>
@@ -1928,6 +1924,12 @@ function initInteraction(){
         }
       }
       if(current.pose === 'aim'){
+        // ⚠️ 审核实测：未点过「姿态动作」时 poseActions 为 null，画布点击
+        //    只会切姿态、不会开火。这里按需初始化，让游戏式交互自足。
+        if(!poseActions){
+          initPoseActions();
+          if(interaction && interaction.player) poseActions.attach(interaction.player);
+        }
         if(poseActions && poseActions.anims.includes('aim_fire')){
           if(!poseActions._firing){
             poseActions.startFire();
@@ -2322,6 +2324,9 @@ function switchPose(pose){
   if(tabs) tabs.querySelectorAll('button').forEach((x,i)=>{
     x.classList.toggle('on', Object.keys(c.poses)[i] === pose);
   });
+  // ⚠️ interaction.currentPose 只在 setCharacter 时赋值，切姿态后必须同步，
+  //    否则 scheduleSoundEvents 会拿错姿态的 meta（审核实测它全程停在 'fb'）。
+  if(interaction) interaction.currentPose = pose;
   // 姿态动作面板要按新姿态重建（cover/aim 动画清单不同）
   if(poseActions) setTimeout(()=>poseActions.rebuild(), 60);
   loadPose();
