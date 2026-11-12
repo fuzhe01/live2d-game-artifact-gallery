@@ -84,6 +84,26 @@
     padding:.6rem .7rem; border-top:1px solid var(--line);
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
+  .card .name small{ font-size:.62rem; color:var(--muted, #8a7b86); letter-spacing:0; }
+  .card .skin-badge{
+    position:absolute; top:.5rem; left:.5rem; font-family:var(--mono); font-size:.6rem;
+    letter-spacing:.04em; color:var(--foam); background:rgba(42,22,32,.86);
+    border:1px solid var(--line); padding:.15rem .4rem; border-radius:3px;
+  }
+  #group-skins.off{ opacity:.55; }
+  .skin-tabs{
+    position:absolute; left:1rem; top:4.2rem; z-index:20;
+    display:flex; flex-wrap:wrap; gap:.3rem; max-width:min(46vw, 620px);
+  }
+  .skin-tabs:empty{ display:none; }
+  .skin-tabs button{
+    font-family:var(--mono); font-size:.62rem; color:var(--foam);
+    background:rgba(30,15,22,.86); border:1px solid var(--line);
+    padding:.22rem .5rem; border-radius:3px; cursor:pointer; max-width:11rem;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .skin-tabs button:hover{ border-color:var(--accent); }
+  .skin-tabs button.on{ background:var(--accent); color:var(--abyss); border-color:var(--accent); }
   .card .badge{
     position:absolute; top:.5rem; right:.5rem; font-family:var(--mono); font-size:.6rem;
     letter-spacing:.06em; color:var(--abyss); background:var(--accent);
@@ -261,6 +281,13 @@
   .ia-btn.toggle.on{
     background:var(--accent); color:var(--abyss); border-color:var(--accent); font-weight:600;
   }
+  /* ① 精简 UI：主行 5 个按钮常显，调试/导出工具折进「⚙ 工具」 */
+  .ia-tools{
+    display:none; flex-basis:100%; gap:.4rem; padding-top:.45rem;
+    margin-top:.35rem; border-top:1px solid var(--line);
+  }
+  .ia-tools.open{ display:flex; flex-wrap:wrap; }
+  .ia-btn.tool-toggle.on{ background:var(--accent); color:var(--abyss); border-color:var(--accent); }
   .ia-status{
     font-family:var(--mono); font-size:.66rem; color:var(--foam);
     letter-spacing:.03em; opacity:.85; margin-left:.3rem;
@@ -875,13 +902,16 @@
           <option value="4.0">Spine 4.0</option>
           <option value="4.1">Spine 4.1</option>
         </select>
+        <!-- ⑦ 借鉴 nikke-db gallery：按活动名 / 章节号细分（选对应分类时才有选项） -->
+        <select class="sortsel" id="filter-sub" title="活动 / 章节细分" style="display:none"></select>
         <select class="sortsel" id="sort-by" title="排序">
           <option value="id">按 ID</option>
           <option value="name">名称 A→Z</option>
           <option value="poses">姿态数多→少</option>
         </select>
         <select class="sortsel card-cols" id="card-cols" title="每行卡片数"></select>
-        <input class="search" id="search" placeholder="搜索 NIKKE (名字/id)…" autocomplete="off" style="max-width:220px">
+        <button class="sortsel" id="group-skins" title="同一角色的多套服装合并为一张卡片；点击展开逐套">合并皮肤 ✓</button>
+        <input class="search" id="search" placeholder="搜索 NIKKE (中文/英文/id)…" autocomplete="off" style="max-width:220px">
       </div>
     </div>
     <div class="grid" id="grid"></div>
@@ -891,28 +921,32 @@
   <div id="stage-view">
     <button class="back-btn" id="back">← 返回列表</button>
     <div class="pose-tabs" id="pose-tabs"></div>
+    <div class="skin-tabs" id="skin-tabs"></div>
     <div class="ver-badge" id="ver-badge"></div>
     <div class="motions" id="motion-panel"></div>
     <div class="interact-bar" id="interact-bar">
-      <button class="ia-btn" data-kind="touch" title="普通触摸（轮换 1→2→3）">摸摸</button>
-      <button class="ia-btn ia-tier-hi" data-kind="touch_love"
-              title="高阶触摸（游戏内需好感度 10 解锁，画廊已全解锁）">摸摸<i class="ia-tier">高阶</i></button>
+      <button class="ia-btn" data-kind="touch" title="普通触摸（轮换台词）">摸摸</button>
       <button class="ia-btn" data-kind="stay" title="待机台词">待机</button>
-      <button class="ia-btn ia-tier-hi" data-kind="stay_love"
-              title="高阶待机（游戏内需好感度 10 解锁，画廊已全解锁）">待机<i class="ia-tier">高阶</i></button>
-      <button class="ia-btn toggle" id="ia-love" title="切换触摸时是否用好感版">♡</button>
-      <button class="ia-btn toggle on" id="ia-lip" title="语音播放时口型同步">口型</button>
-      <button class="ia-btn" id="ia-extras" title="显示/隐藏大件配件（acc）">配件</button>
       <button class="ia-btn" id="ia-voice" title="打开语音全集面板">语音全集</button>
-      <button class="ia-btn" id="ia-timeline" title="时间轴定格/逐帧">时间轴</button>
-      <button class="ia-btn" id="ia-mix" title="动画混合时长调节">混合</button>
-      <button class="ia-btn" id="ia-debug" title="骨骼/网格调试视图">骨骼</button>
-      <button class="ia-btn" id="ia-pose-act" title="当前姿态专属动作（换弹/开火/瞄准）">姿态动作</button>
-      <button class="ia-btn toggle on" id="ia-sub" title="语音字幕气泡">字幕</button>
       <button class="ia-btn" id="ia-skin-compare" title="同角色多皮肤并排对比">皮肤对比</button>
-      <button class="ia-btn" id="ia-speed" title="播放速度 0.1x~2.0x">速度</button>
-      <button class="ia-btn" id="ia-shot" title="导出当前画面为 PNG">截图</button>
-      <button class="ia-btn" id="ia-transform" title="旋转 / 镜像翻转">旋转</button>
+      <button class="ia-btn" id="ia-pose-act" title="当前姿态专属动作（换弹/开火/瞄准）">姿态动作</button>
+      <button class="ia-btn tool-toggle" id="ia-tools" title="展开/收起调试与导出工具">⚙ 工具</button>
+      <div class="ia-tools" id="ia-tools-row">
+        <button class="ia-btn ia-tier-hi" data-kind="touch_love"
+                title="高阶触摸（游戏内需好感度 10 解锁）">摸摸<i class="ia-tier">高阶</i></button>
+        <button class="ia-btn ia-tier-hi" data-kind="stay_love"
+                title="高阶待机（游戏内需好感度 10 解锁）">待机<i class="ia-tier">高阶</i></button>
+        <button class="ia-btn toggle" id="ia-love" title="切换触摸时是否用好感版">♡</button>
+        <button class="ia-btn toggle on" id="ia-lip" title="语音播放时口型同步">口型</button>
+        <button class="ia-btn" id="ia-extras" title="显示/隐藏大件配件（acc）">配件</button>
+        <button class="ia-btn" id="ia-timeline" title="时间轴定格/逐帧">时间轴</button>
+        <button class="ia-btn" id="ia-mix" title="动画混合时长调节">混合</button>
+        <button class="ia-btn" id="ia-debug" title="骨骼/网格调试视图">骨骼</button>
+        <button class="ia-btn toggle on" id="ia-sub" title="语音字幕气泡">字幕</button>
+        <button class="ia-btn" id="ia-speed" title="播放速度 0.1x~2.0x">速度</button>
+        <button class="ia-btn" id="ia-shot" title="导出当前画面为 PNG">截图</button>
+        <button class="ia-btn" id="ia-transform" title="旋转 / 镜像翻转">旋转</button>
+      </div>
       <span class="ia-status" id="ia-status"></span>
     </div>
     <div class="stage">
@@ -1072,7 +1106,7 @@ let manifest = null;
 let current = { idx: -1, pose: 'fb' };
 let player = null;
 let loadToken = 0;
-const ui = { cat: 'all', pose: '', ver: '', sort: 'id', q: '' };
+const ui = { cat: 'all', pose: '', ver: '', sort: 'id', q: '', groupSkins: true, sub: '' };
 
 // ==================== 互动 ====================
 let interaction = null;      // NikkeInteraction 实例
@@ -1595,6 +1629,41 @@ function buildTfPanel(host){
 }
 
 function initInteraction(){
+  // 「⚙ 工具」展开/收起次要按钮（① 精简 UI）
+  const toolBtn = document.getElementById('ia-tools');
+  const toolRow = document.getElementById('ia-tools-row');
+  if(toolBtn && toolRow){
+    toolBtn.onclick = () => {
+      const open = toolRow.classList.toggle('open');
+      toolBtn.classList.toggle('on', open);
+    };
+  }
+  // ① 面板互斥：用捕获阶段监听，点任一面板按钮前先关掉其它浮层。
+  // 根因：vb/tl/mx/dbg 等面板展开后会盖住 interact-bar 后半段按钮，
+  // 实测「速度/截图/旋转」在语音面板开着时点不到，看起来像没效果。
+  const bar = document.getElementById('interact-bar');
+  if(bar){
+    bar.addEventListener('click', (e) => {
+      const btn = e.target.closest('.ia-btn');
+      if(!btn || !btn.id) return;
+      const PANEL_BTNS = ['ia-voice','ia-timeline','ia-mix','ia-debug',
+        'ia-pose-act','ia-skin-compare','ia-speed','ia-shot','ia-transform'];
+      if(!PANEL_BTNS.includes(btn.id)) return;
+      const alreadyOn = btn.classList.contains('on');
+      // 关掉所有其它已打开的面板与按钮高亮
+      const sels = ['.vb-panel','.tl-panel','.mx-panel','.dbg-panel','.sc-panel',
+                    '.pose-panel','.sp-panel','.shot-panel','.tf-panel'];
+      for(const s of sels){
+        document.querySelectorAll(s + '.on').forEach(el => el.classList.remove('on'));
+      }
+      PANEL_BTNS.forEach(id => {
+        if(id !== btn.id && document.getElementById(id))
+          document.getElementById(id).classList.remove('on');
+      });
+      // 若本次是关闭自己，跳过后续（原 onclick 会执行 toggle 再关一次，安全）
+      if(alreadyOn) btn.classList.remove('on');
+    }, true);
+  }
   interaction = new NikkeInteraction({
     dataDir: '../data',
     voiceDir: '../data/voice',
@@ -1848,6 +1917,34 @@ function initInteraction(){
       const dy = Math.abs(e.clientY - downY);
       const dt = Date.now() - downT;
       if (dx > 6 || dy > 6 || dt > 500) return;
+      const c = manifest.characters[current.idx];
+      if(!c) return;
+      // ⑥ 游戏式交互：cover 点击 → 探身切到 aim；aim 点击 → 开火。
+      // 用当前 viewer 姿态（current.pose）判断，不用 __ia.currentPose。
+      if(current.pose === 'cover' && c.poses.aim){
+        if(switchPose('aim')){
+          setIaStatus('▶ 探身瞄准（移动鼠标瞄准 · 点击开火）');
+          return;
+        }
+      }
+      if(current.pose === 'aim'){
+        if(poseActions && poseActions.anims.includes('aim_fire')){
+          if(!poseActions._firing){
+            poseActions.startFire();
+            setIaStatus('▶ 连射中（点击停止）');
+          } else {
+            poseActions.stopFire();
+            setIaStatus('■ 停止连射');
+          }
+          // 瞄准偏移跟随鼠标位置
+          const r = stage.getBoundingClientRect();
+          const nx = ((e.clientX - r.left) / r.width) * 2 - 1;
+          const ny = ((e.clientY - r.top) / r.height) * 2 - 1;
+          if(poseActions.hasAimAxis) poseActions.setAim(nx, ny);
+          return;
+        }
+      }
+      // fb / 其它：大厅触摸台词
       if (!interaction || !interaction.isSupported()) return;
       const kind = loveMode ? 'touch_love' : 'touch';
       interaction.trigger(kind);
@@ -1971,9 +2068,19 @@ function applyFilters(){
   else if(ui.cat !== 'all') items = items.filter(c => (c.category||'misc') === ui.cat);
   if(ui.pose) items = items.filter(c => c.poses && c.poses[ui.pose]);
   if(ui.ver)  items = items.filter(c => String(c.version) === ui.ver);
+  // ⑦ 活动 / 章节副分类筛选
+  if(ui.sub){
+    items = items.filter(c =>
+      (c.eventGroup || '') === ui.sub || (c.chapter || '') === ui.sub);
+  }
   if(ui.q){
     const q = ui.q;
-    items = items.filter(c => c.name.toLowerCase().includes(q) || c.id.toLowerCase().includes(q));
+    items = items.filter(c =>
+      c.name.toLowerCase().includes(q) ||
+      c.id.toLowerCase().includes(q) ||
+      (c.nameCn || '').includes(q) ||
+      (c.nameJp || '').includes(q) ||
+      (c.nameKo || '').includes(q));
   }
   items = items.slice();
   // 分类优先级：角色 > 活动 > 剧情 > 其它。
@@ -1994,6 +2101,37 @@ function applyFilters(){
     const d = catRank(a) - catRank(b);
     return d !== 0 ? d : a.id.localeCompare(b.id);
   });
+
+  // ── 同角色多服装合并（①）──
+  // 默认把 cNNN_NN 皮肤折叠到本体卡片，卡片显示「N 套」徽标。
+  // 搜索/收藏/明确关闭分组时展开，保证能精确命中具体皮肤。
+  // 返回的每一项挂上 _skins（同组全部条目），供卡片与详情页皮肤切换器使用。
+  const collapse = ui.groupSkins && ui.cat !== 'fav' && !ui.q;
+  if(collapse){
+    const groups = new Map();
+    for(const c of items){
+      const key = c.baseId || c.id;
+      if(!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(c);
+    }
+    const merged = [];
+    for(const [, g] of groups){
+      // 本体优先（isSkin=false），否则取 id 最小者
+      const rep = g.find(x => !x.isSkin) || g[0];
+      rep._skins = g.map(x => x.id);
+      rep._skinCount = g.length;
+      merged.push(rep);
+    }
+    // 重新按同样规则排序（分组后 rep 顺序已被打乱）
+    const reSort = (arr) => arr.sort((a,b)=>{
+      const d = catRank(a) - catRank(b);
+      if(d !== 0) return d;
+      if(ui.sort === 'name') return a.name.localeCompare(b.name);
+      if(ui.sort === 'poses') return Object.keys(b.poses).length-Object.keys(a.poses).length;
+      return a.id.localeCompare(b.id);
+    });
+    items = reSort(merged);
+  }
   return items;
 }
 
@@ -2008,14 +2146,23 @@ function buildGrid(){
       const poseKeys = Object.keys(c.poses||{});
       const card = document.createElement('div');
       card.className = 'card';
+      // 中文名优先显示，英文名作副行；皮肤合并时加「N 套」徽标
+      const cn = c.nameCn || '';
+      const en = c.name !== c.id ? c.name : '';
+      const title = cn || en || c.id;
+      const sub = cn && en ? en : (cn ? c.id : (en ? c.id : ''));
+      // 徽标只在「合并皮肤」生效时显示；搜索/收藏/逐套展开时 _skinCount 不会被赋值
+      const skinBadge = (ui.groupSkins && !ui.q && ui.cat !== 'fav' && c._skinCount > 1)
+        ? `<span class="skin-badge" title="同一角色共 ${c._skinCount} 套服装，详情页可切换">${c._skinCount} 套</span>` : '';
       card.innerHTML =
         `<div class="thumb">`+
           `<span class="badge">${c.version||''}</span>`+
+          skinBadge+
           `<span class="fav-star${isFav(c.id)?' on':''}" data-fid="${c.id}" title="收藏/取消收藏">★</span>`+
-          `<img loading="lazy" src="${c.cover||''}" alt="${c.name}">`+
+          `<img loading="lazy" src="${c.cover||''}" alt="${title}">`+
           `<div class="poses">${poseKeys.map(p=>`<i${p===ui.pose?' class="hl"':''}>${POSE_LABEL[p]||p}</i>`).join('')}</div>`+
         `</div>`+
-        `<div class="name">${c.name}${c.name!==c.id?` · ${c.id}`:''}</div>`;
+        `<div class="name">${title}${sub?`<small> · ${sub}</small>`:''}</div>`;
       // 星标点击独立处理，不触发进入详情
       card.querySelector('.fav-star').onclick = (e) => {
         e.stopPropagation();
@@ -2046,13 +2193,39 @@ function buildGrid(){
     btn.onclick = () => {
       document.querySelectorAll('#nav-tabs button').forEach(b=>b.classList.remove('on'));
       btn.classList.add('on');
-      ui.cat = btn.dataset.cat; reset();
+      ui.cat = btn.dataset.cat; ui.sub = '';
+      buildSubFilter();
+      reset();
     };
   });
+  // ⑦ 活动 / 章节副分类下拉（只在 event / story 分类下出现）
+  function buildSubFilter(){
+    const sel = document.getElementById('filter-sub');
+    if(!sel) return;
+    const key = ui.cat === 'event' ? 'eventGroup' : (ui.cat === 'story' ? 'chapter' : null);
+    if(!key){ sel.style.display = 'none'; sel.innerHTML = ''; ui.sub = ''; return; }
+    const vals = [...new Set(manifest.characters
+      .filter(c => c.category === ui.cat && c[key])
+      .map(c => c[key]))].sort();
+    sel.innerHTML = `<option value="">全部${ui.cat === 'event' ? '活动' : '章节'} (${vals.length})</option>` +
+      vals.map(v => `<option value="${v}">${v}</option>`).join('');
+    sel.style.display = vals.length ? '' : 'none';
+  }
+  const subSel = document.getElementById('filter-sub');
+  if(subSel) subSel.onchange = e => { ui.sub = e.target.value; reset(); };
+  buildSubFilter();
   // 筛选/排序下拉
   document.getElementById('filter-pose').onchange = e => { ui.pose = e.target.value; reset(); };
   document.getElementById('filter-ver').onchange  = e => { ui.ver = e.target.value; reset(); };
   document.getElementById('sort-by').onchange     = e => { ui.sort = e.target.value; reset(); };
+  // 合并皮肤开关（①）
+  const gsBtn = document.getElementById('group-skins');
+  if(gsBtn) gsBtn.onclick = () => {
+    ui.groupSkins = !ui.groupSkins;
+    gsBtn.textContent = ui.groupSkins ? '合并皮肤 ✓' : '逐套展开';
+    gsBtn.classList.toggle('off', !ui.groupSkins);
+    reset();
+  };
   // 搜索
   let t;
   document.getElementById('search').oninput = () => { clearTimeout(t); t=setTimeout(()=>{
@@ -2071,8 +2244,47 @@ function enterStage(i, preferPose){
   document.getElementById('grid-view').style.display = 'none';
   document.getElementById('stage-view').style.display = 'block';
   buildPoseTabs(c);
+  buildSkinTabs(c);
   updateInteractBar();
   setTimeout(()=> loadPose(), 30);
+}
+
+/** 详情页皮肤切换（①）：按 baseId 找同组全部服装，做成一排按钮。
+ *  切换时保留当前姿态，清掉旧 player 再重载，避免残留多份渲染。 */
+function switchSkin(idx, keepPose){
+  if (skinCompare && skinCompare.isActive()) skinCompare.close();
+  const scBtn = document.getElementById('ia-skin-compare');
+  if (scBtn) scBtn.classList.remove('on');
+  disposePlayer();
+  if (interaction) interaction.stop();
+  current.idx = idx;
+  const c = manifest.characters[idx];
+  if (!c.poses[keepPose]) keepPose = c.poses.fb ? 'fb' : Object.keys(c.poses)[0];
+  current.pose = keepPose;
+  buildPoseTabs(c);
+  buildSkinTabs(c);
+  updateInteractBar();
+  setTimeout(()=> loadPose(), 30);
+}
+
+function buildSkinTabs(c){
+  const bar = document.getElementById('skin-tabs');
+  if(!bar) return;
+  bar.innerHTML = '';
+  const base = c.baseId || c.id;
+  const group = manifest.characters
+    .map((x, i) => ({x, i}))
+    .filter(o => (o.x.baseId || o.x.id) === base);
+  if(group.length < 2) return;   // 单套服装不显示切换器
+  for(const {x, i} of group){
+    const b = document.createElement('button');
+    const label = x.nameCn || (x.name !== x.id ? x.name : x.id);
+    b.textContent = label;
+    b.title = `${x.id} · ${x.name}`;
+    b.classList.toggle('on', i === current.idx);
+    b.onclick = () => switchSkin(i, current.pose);
+    bar.appendChild(b);
+  }
 }
 
 function exitStage(){
@@ -2093,20 +2305,27 @@ function buildPoseTabs(c){
     const b = document.createElement('button');
     b.textContent = POSE_LABEL[pose] || pose;
     b.classList.toggle('on', pose === current.pose);
-    b.onclick = () => {
-      // 皮肤对比模式下忽略姿态切换（对比面板自己管理姿态），
-      // 否则会白白重建一个主 player，且对比状态与 current.pose 不一致。
-      if (skinCompare && skinCompare.isActive()) return;
-      if(pose === current.pose) return;
-      // §4.5：切姿态前记录当前动画相位，供新 player 无缝接续
-      capturePoseHandoff(current.pose);
-      current.pose = pose;
-      tabs.querySelectorAll('button').forEach(x=>x.classList.remove('on'));
-      b.classList.add('on');
-      loadPose();
-    };
+    b.onclick = () => switchPose(pose);
     tabs.appendChild(b);
   });
+}
+
+/** 切换姿态（⑥ 游戏式交互由画布点击直接调用）。 */
+function switchPose(pose){
+  const c = manifest.characters[current.idx];
+  if(!c || !c.poses[pose]) return false;
+  if (skinCompare && skinCompare.isActive()) return false;
+  if(pose === current.pose) return false;
+  capturePoseHandoff(current.pose);
+  current.pose = pose;
+  const tabs = document.getElementById('pose-tabs');
+  if(tabs) tabs.querySelectorAll('button').forEach((x,i)=>{
+    x.classList.toggle('on', Object.keys(c.poses)[i] === pose);
+  });
+  // 姿态动作面板要按新姿态重建（cover/aim 动画清单不同）
+  if(poseActions) setTimeout(()=>poseActions.rebuild(), 60);
+  loadPose();
+  return true;
 }
 
 function disposePlayer(){

@@ -50,6 +50,9 @@ class PoseActions {
   }
 
   attach(player) {
+    // 换 player（切姿态/切皮肤）时先收掉上一轮的连射定时器，避免泄漏
+    if (this._fireKickTimer) { clearInterval(this._fireKickTimer); this._fireKickTimer = null; }
+    this._firing = false;
     this.player = player;
     this.anims = this._listAnims();
     this.hasReload = this.anims.includes('cover_reload');
@@ -146,15 +149,19 @@ class PoseActions {
     return out;
   }
 
-  /** 触发某个动作 */
+  /** 触发某个动作。fire 是持续循环开关：再点一次（或 stopFire）停止。 */
   trigger(key) {
     if (!this.player) return false;
+    // ④ aim_fire 设为循环动作：第一次点开始连射，第二次点回到 aim_idle。
+    if (key === 'fire') {
+      if (this._firing) return this.stopFire();
+      return this.startFire();
+    }
     const idle = this._idleForPose();
     const map = {
       reload: 'cover_reload',
       coverhit: 'cover_hit',
       stun: 'cover_stun',
-      fire: 'aim_fire',
       aimhit: 'aim_hit',
       action: 'action',
       special: 'special',
@@ -190,8 +197,7 @@ class PoseActions {
         })();
 
         let repeat = 1;
-        if (key === 'fire') repeat = 3;
-        else if (key === 'aimhit') repeat = 2;
+        if (key === 'aimhit') repeat = 2;
         else if (key === 'coverhit') repeat = 2;
 
         for (let i = 1; i < repeat; i++) {
@@ -204,10 +210,7 @@ class PoseActions {
       }
       this.player.play();
 
-      // 开火时叠加后坐力
-      if (key === 'fire') this.kick();
-
-      // 记录触发痕迹。有些动作极短（实测 aim_fire 只有 0.1s），
+      // 记录触发痕迹。有些动作极短（实测 aim_hit 只有 0.167s），
       // 外部采样很容易错过，靠这个 lastFired 才能确认确实执行过。
       this.lastFired = {
         key, anim, at: performance.now(),
@@ -226,6 +229,42 @@ class PoseActions {
       console.warn('[PoseActions] 动作失败', anim, e);
       return false;
     }
+  }
+
+  /**
+   * ④ aim_fire 循环开火。
+   * 游戏内是「按住开火」，画廊里用开关：点一次持续连射，再点一次停。
+   */
+  startFire() {
+    if (!this.player || !this.anims.includes('aim_fire')) return false;
+    try {
+      this._firing = true;
+      this.player.setAnimation('aim_fire', true);   // loop=true
+      this.player.play();
+      this.fireCount = (this.fireCount || 0) + 1;
+      this.lastFired = { key: 'fire', anim: 'aim_fire', loop: true,
+                         at: performance.now() };
+      this.onStatus('▶ 连射中（再点「开火」停止）');
+      // 每帧循环一次后坐力，形成持续射击的抖动
+      this._fireKickTimer = setInterval(() => { if (this._firing) this.kick(0.5); }, 150);
+      return true;
+    } catch (e) {
+      this._firing = false;
+      return false;
+    }
+  }
+
+  stopFire() {
+    this._firing = false;
+    if (this._fireKickTimer) { clearInterval(this._fireKickTimer); this._fireKickTimer = null; }
+    const idle = this._idleForPose();
+    try {
+      if (idle) this.player.setAnimation(idle, true);
+      this.player.play();
+    } catch (e) {}
+    this.recoil = 0;
+    this.onStatus('■ 停止连射');
+    return false;   // 让 UI 取消 toggle 高亮
   }
 
   _idleForPose() {
@@ -528,7 +567,12 @@ class PoseActions {
         ? acts.map(a => `<button class="pose-btn" data-k="${a.key}">${a.label}</button>`).join('')
         : '<span class="pose-none">该姿态无动作</span>';
       actBox.querySelectorAll('.pose-btn').forEach(btn => {
-        btn.onclick = () => this.trigger(btn.dataset.k);
+        btn.onclick = () => {
+          const r = this.trigger(btn.dataset.k);
+          // fire 是循环开关：startFire 返回 true 高亮，stopFire 返回 false 取消
+          if (btn.dataset.k === 'fire') btn.classList.toggle('on', !!r);
+        };
+        if (btn.dataset.k === 'fire' && this._firing) btn.classList.add('on');
       });
     }
 

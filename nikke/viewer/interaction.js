@@ -120,10 +120,25 @@ class NikkeInteraction {
   playAnimation(name, loop = false, anims = null) {
     if (!this.player) return false;
     try {
+      const list = anims || this.getAnimations();
+      // ⚠️ cover / aim 姿态的骨架只有 cover_idle / aim_idle / aim_fire 等，
+      // 根本没有 expression_0、idle、talk_* —— fb 的互动动画名在这里不存在。
+      // spine-player 的 setAnimation 传入不存在的名字会留下空轨道，
+      // 表现就是「点一下播语音，角色画面直接消失」。
+      // 修法：目标动画不存在时，只播语音/字幕，不动动画轨道。
+      if (!loop && list.length && !list.includes(name)) {
+        // 若当前轨道本来就空（罕见），补回本姿态的 idle
+        const cur = this.player.animationState.getCurrent(0);
+        if (!cur) {
+          const idle = list.find(a => /(^|_)idle($|_)/i.test(a));
+          if (idle) this.player.setAnimation(idle, true);
+        }
+        return false;
+      }
       this.player.setAnimation(name, loop);
-      if (!loop && anims && anims.length) {
-        const idle = anims.find(a => /(^|_)idle($|_)/i.test(a))
-                  || anims.find(a => /(^|_)(stand|standby|wait|loop)(\b|_|$)/i.test(a));
+      if (!loop && list.length) {
+        const idle = list.find(a => /(^|_)idle($|_)/i.test(a))
+                  || list.find(a => /(^|_)(stand|standby|wait|loop)(\b|_|$)/i.test(a));
         if (idle && idle !== name) {
           try { this.player.addAnimation(idle, true, 0); } catch (e) {}
         }

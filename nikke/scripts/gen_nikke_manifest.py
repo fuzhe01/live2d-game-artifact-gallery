@@ -93,43 +93,103 @@ def scan_legacy(rdir, cid):
     }
 
 
-def load_name_map():
-    """构建 id->真名 映射，只采信外部数据源（优先级低->高）：
-       1. CDN 索引 l2d.json（若能读到）
-       2. _fetched.json（本次抓取；扫描补漏时 name 可能是 id 占位）
+def base_id_of(cid):
+    """皮肤/服装变体归到本体：c010_02 → c010；c010 → c010；其它原样返回。
 
-    ⚠️ 不读现有 manifest 的名字：
-      manifest 的 name 现在由 display_name() 生成（占位 id → 美化标题），
-      若回读会把美化名当「真名」永久固化，导致无法回退、也无法随规则更新。
-      真名只应来自 CDN 索引 / _fetched 这类外部数据。
-      占位名（name==id）不参与覆盖。
+    这是「同角色多服装合并」的数据基础。只认 cNNN_NN 形态，
+    cNNN_mini / eventscene_* / story* 一律独立成组。
     """
-    names = {}
+    m = re.match(r"^(c\d{3})_\d{2}$", cid)
+    return m.group(1) if m else cid
 
-    # 1. CDN 索引 l2d.json（本地缓存或运行时不一定可用，容错处理）
+
+def load_char_db():
+    """构建「角色数据库」：id -> {name, nameCn, 多语言, baseId, isSkin}。
+
+    数据源优先级（只采信外部数据，绝不回读现有 manifest 的名字，
+    否则会把生成的显示名固化、导致重建漂移）：
+      1. _nikkedb_l2d.json  —— Nikke-db 开源的多语言角色表
+         （756 条，448 个含简体中文 cn；来源为客户端 Locale_Character SQLite）
+      2. _l2d_index.json    —— 旧 CDN 索引（267 条，补齐 l2d 未收录的 id）
+      3. _fetched.json      —— 本次抓取
+
+    输出同时写一份 character_db.json 作为「数据契约」，供前端与后续脚本使用。
+    """
+    db = {}
+
+    def put(cid, **fields):
+        cur = db.setdefault(cid, {})
+        for k, v in fields.items():
+            if v and not cur.get(k):
+                cur[k] = v
+
+    # 1. Nikke-db 多语言表（最高优先级）
+    #    优先读随仓库提交的 scripts/names/ 副本（可重建）；兼容旧的 data/ 缓存。
+    l2d_path = os.path.join(os.path.dirname(__file__), "names", "nikkedb_l2d.json")
+    if not os.path.exists(l2d_path):
+        l2d_path = os.path.join(C.DATA_DIR, "_nikkedb_l2d.json")
+    if os.path.exists(l2d_path):
+        try:
+            for e in json.load(open(l2d_path, encoding="utf-8")):
+                cid = e.get("id")
+                if not cid:
+                    continue
+                put(cid,
+                    name=e.get("name"),
+                    nameCn=e.get("cn"),
+                    nameKo=e.get("ko"), nameJp=e.get("jp"),
+                    nameTw=e.get("tw"), nameDe=e.get("de"),
+                    nameTh=e.get("th"), nameFr=e.get("fr"))
+                if e.get("f"):
+                    put(e["f"].lower(),
+                        name=e.get("name"), nameCn=e.get("cn"))
+        except Exception as ex:
+            print(f"  [warn] 读取 _nikkedb_l2d.json 失败: {ex}")
+
+    # 2. 旧 CDN 索引（补漏，不覆盖已有）
     idx_path = os.path.join(C.DATA_DIR, "_l2d_index.json")
     if os.path.exists(idx_path):
         try:
             for e in json.load(open(idx_path, encoding="utf-8")):
                 if e.get("name") and e["name"] != e["id"]:
-                    names[e["id"]] = e["name"]
+                    put(e["id"], name=e["name"])
                     if e.get("f"):
-                        names[e["f"].lower()] = e["name"]
+                        put(e["f"].lower(), name=e["name"])
         except Exception:
             pass
 
-    # 2. _fetched.json —— 仅采用「非占位」名字（name != id），避免覆盖真实名
+    # 3. _fetched.json —— 仅采用非占位名字
     meta_path = os.path.join(C.DATA_DIR, "_fetched.json")
     if os.path.exists(meta_path):
         try:
             for e in json.load(open(meta_path, encoding="utf-8")):
                 nm = e.get("name", e["id"])
                 if nm and nm != e["id"]:
-                    names[e["id"]] = nm
+                    put(e["id"], name=nm)
         except Exception:
             pass
 
-    return names
+    # 派生 baseId / isSkin
+    for cid, fields in db.items():
+        fields["baseId"] = base_id_of(cid)
+        fields["isSkin"] = fields["baseId"] != cid
+
+    return db
+
+
+def write_char_db(db):
+    """把角色数据库单独落盘，作为可复用的数据契约（viewer 与脚本共用）。"""
+    out = {
+        "_source": "Nikke-db/nikke-db-vue src/utils/json/l2d.json (Locale_Character SQLite)",
+        "_note": "角色名/多语言/服装分组的单一真相源；由 gen_nikke_manifest.py 生成",
+        "characters": {cid: f for cid, f in sorted(db.items())},
+    }
+    path = os.path.join(C.VIEWER_DIR, "character_db.json")
+    os.makedirs(C.VIEWER_DIR, exist_ok=True)
+    json.dump(out, open(path, "w", encoding="utf-8"),
+              ensure_ascii=False, separators=(",", ":"))
+    print(f"角色数据库 {len(db)} -> {path}")
+    return path
 
 
 def categorize(cid):
@@ -169,7 +229,7 @@ def cover_url(cid, pose_info):
 
 
 def main():
-    names = load_name_map()
+    db = load_char_db()
     chars = []
     if not os.path.isdir(C.DATA_DIR):
         print("无 data 目录")
@@ -196,20 +256,45 @@ def main():
             continue
 
         fb = poses.get("fb") or next(iter(poses.values()))
-        chars.append({
+        info = db.get(cid, {})
+        rec = {
             "id": cid,
-            "name": names.get(cid, cid),
+            "name": info.get("name") or cid,
             "dir": f"../data/{cid}",
             "category": categorize(cid),
             "poses": poses,
             "version": fb["version"],
             "cover": cover_url(cid, fb),
-        })
+            # ── 数据契约字段（⑦ / ① 的基础）──
+            "baseId": base_id_of(cid),
+            "isSkin": base_id_of(cid) != cid,
+        }
+        # 中文名与多语言：只在存在时写入，避免污染 442 个占位条目
+        for k in ("nameCn", "nameKo", "nameJp", "nameTw",
+                  "nameDe", "nameTh", "nameFr"):
+            if info.get(k):
+                rec[k] = info[k]
+        # ⑦ 借鉴 nikke-db gallery 的插画分类：给活动/剧情加副分类，
+        #   便于按活动名 / 章节号筛选（不改主分类）。
+        cat = rec["category"]
+        if cid.startswith("eventscene_"):
+            rest = cid[len("eventscene_"):]
+            # 去掉尾部 _NN 编号，剩下就是活动名
+            m = re.match(r"^(.*?)_?\d{2}$", rest)
+            rec["eventGroup"] = (m.group(1) if m else rest).strip("_")
+        elif cid.startswith("eventtitle_"):
+            rec["eventGroup"] = cid[len("eventtitle_"):].rstrip("_0123456789")
+        elif re.match(r"^story\d{4}", cid):
+            rec["chapter"] = cid[5:7]
+        chars.append(rec)
 
     os.makedirs(C.VIEWER_DIR, exist_ok=True)
     json.dump({"characters": chars}, open(C.MANIFEST_PATH, "w", encoding="utf-8"),
               ensure_ascii=False, separators=(",", ":"))
     print(f"NIKKE 角色 {len(chars)} -> {C.MANIFEST_PATH}")
+    write_char_db(db)
+    print(f"真名 {sum(1 for c in chars if c['name'] != c['id'])} / "
+          f"中文名 {sum(1 for c in chars if c.get('nameCn'))}")
     # 版本 + 分类统计
     from collections import Counter
     vc = Counter(c["version"] for c in chars)
