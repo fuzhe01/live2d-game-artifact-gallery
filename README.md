@@ -40,8 +40,7 @@
   列表用占位图标标注「资源未实装 / 游戏内置测试模型」。
 - **🖼 Gallery 剧情插画（2026-11-13 新增）**：
   从游戏客户端直接解包 `scenariobackground(hd)_assets_eventscene_*.bundle`，
-  **1237 张 2048×2048** 原图 → WebP q88（761.9 MB），内容与 nikke-db 的
-  gallery 页一致但分辨率更高。
+  **1237 张原图**（946 张 2048×2048，其余 291 张为游戏源尺寸 1024²/900² 等）→ WebP q88（761.9 MB）。覆盖 nikke-db gallery 的 eventscene 部分（游戏内剧情/活动插画），不含相册封面、四格漫画等非 eventscene 内容。
   导航新增独立「🖼 Gallery」视图，按活动分 **129 组**
   （Chapter 50 82 张 / Goddess Fall 64 / Old Tales 53 …），
   支持搜索、分组筛选、滚动加载、点击看大图与下载。

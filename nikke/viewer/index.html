@@ -2644,6 +2644,7 @@ function waitForSize(id){
 //   data/gallery/manifest.json  { count, items:[{name,file,w,h,group,title}] }
 let galData = null;          // {items:[...], groups:[...]}
 let galReady = false;
+let galScrollHandler = null; // 复用的滚动监听句柄（避免重复渲染）
 
 async function loadGalleryData(){
   if(galReady) return galData;
@@ -2739,15 +2740,24 @@ async function renderGallery(){
     shown += Math.min(PAGE, items.length - shown);
   };
   append();
-  // 滚动追加
-  const onScroll = () => {
-    if(shown >= items.length){ window.removeEventListener('scroll', onScroll); return; }
+  // ⚠️ 滚动监听必须复用同一个句柄并先移除旧的：
+  //    每次 render 新建闭包会让旧监听器继续用旧的 shown/items 往同一个 grid
+  //    里追加，反复切视图后出现重复卡片（审核实测 1637 cells / 400 张重影）。
+  if(galScrollHandler){
+    window.removeEventListener('scroll', galScrollHandler);
+    galScrollHandler = null;
+  }
+  galScrollHandler = () => {
+    if(shown >= items.length){
+      window.removeEventListener('scroll', galScrollHandler);
+      galScrollHandler = null;
+      return;
+    }
     if(window.innerHeight + window.scrollY >= document.body.scrollHeight - 600){
       append();
     }
   };
-  window.removeEventListener('scroll', onScroll);
-  window.addEventListener('scroll', onScroll);
+  window.addEventListener('scroll', galScrollHandler);
 }
 
 function openLightbox(it){
@@ -2784,7 +2794,12 @@ function initGallery(){
     gsearch.oninput = () => { clearTimeout(t); t = setTimeout(renderGallery, 200); };
   }
   if(gclose) gclose.onclick = closeLightbox;
-  if(lb) lb.onclick = (e) => { if(e.target === lb) closeLightbox(); };
+  if(lb) lb.onclick = (e) => {
+    // 图片以 object-fit:contain 铺满容器，遮罩本身没有空白可点 ——
+    // 因此除操作栏（标题/元信息/下载/关闭）外，点图片本身也应关闭。
+    if(e.target.closest('.gal-lb-bar')) return;
+    closeLightbox();
+  };
   document.addEventListener('keydown', (e) => {
     if(e.key === 'Escape') closeLightbox();
   });
