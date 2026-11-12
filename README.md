@@ -38,6 +38,22 @@
   通过父角色继承，其余 120 个是量产型/Boss（游戏内本就无台词），界面明确提示。
 - **占位资源**：c967/c968/c969 贴图全黑、c999 是游戏内置灰色 dummy 人偶，
   列表用占位图标标注「资源未实装 / 游戏内置测试模型」。
+- **🖼 Gallery 剧情插画（2026-11-13 新增）**：
+  从游戏客户端直接解包 `scenariobackground(hd)_assets_eventscene_*.bundle`，
+  **1237 张 2048×2048** 原图 → WebP q88（761.9 MB），内容与 nikke-db 的
+  gallery 页一致但分辨率更高。
+  导航新增独立「🖼 Gallery」视图，按活动分 **129 组**
+  （Chapter 50 82 张 / Goddess Fall 64 / Old Tales 53 …），
+  支持搜索、分组筛选、滚动加载、点击看大图与下载。
+  重建：`python nikke/scripts/extract_all_bg.py` +
+  `python nikke/scripts/build_gallery_manifest.py`
+  （图片在 `nikke/data/gallery/`，data 目录 gitignore 不进版本库）。
+
+  解包技术要点（此前卡点）：catalog 的 `pak_offset` 因增量补丁从第 6 段起与
+  真实文件不符（catalog 描述 16.85 GB，实际 13.47 GB）。改用 `store.cdb.idx`：
+  每条 28B = md5(16) + u32_1(段内偏移) + u32_2(段号) + u32_3(压缩大小)，
+  **真实偏移 = u32_2 × 2^32 + u32_1**。实测回绕 3 次、
+  真实偏移范围 256 ~ 14,461,284,434 与文件大小完全吻合。
 - **交互（2026-11-12 重构）**：
   * 列表按 `baseId` 合并同角色多套服装（696 → 495 组），卡片显示「N 套」，
     详情页 `#skin-tabs` 可切换并保留当前姿态；搜索时自动逐套展开
