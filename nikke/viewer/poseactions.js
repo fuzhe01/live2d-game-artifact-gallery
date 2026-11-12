@@ -67,6 +67,8 @@ class PoseActions {
       if (this.player !== player) return;   // 期间已换 player
       this._snapX = this.boneX ? { x: this.boneX.x, y: this.boneX.y } : null;
       this._snapY = this.boneY ? { x: this.boneY.x, y: this.boneY.y } : null;
+      // 模式 B：采样 aim_x/aim_y 动画的位移量（无同名骨骼的角色靠它做瞄准）
+      if (!this.boneX && !this.boneY) this._sampleAimDelta();
     }));
     this.refresh();
   }
@@ -79,12 +81,28 @@ class PoseActions {
     }
   }
 
-  /** 找 aim_x / aim_y 骨骼（实测它们就是瞄准轴） */
+  /**
+   * 找瞄准控制源。
+   *
+   * ⚠️ 重要纠正（2026-11-12 实测）：
+   *   aim_x / aim_y 【主要】是**动画名**，不是骨骼名。
+   *   全库 401 个有 aim 姿态的条目里，只有 c010 系（4 个）骨骼表里恰好有
+   *   同名的 aim_x / aim_y 骨骼；c011/c012/c016 等都没有。
+   *   旧实现只 find 骨骼 → hasAimAxis 恒 false → 71% 角色的瞄准功能完全不生效。
+   *
+   * 正确做法：优先用骨骼（若能找到，可直接改坐标，性能好）；
+   *           否则退回播放 aim_x / aim_y 动画，用 trackTime 控制偏移量。
+   */
   _findAimBones() {
     this.boneX = null;
     this.boneY = null;
+    this.aimAnimX = null;
+    this.aimAnimY = null;
+    this.hasAimBone = false;
+    this.hasAimAnim = false;
     try {
       const sk = this.player.skeleton;
+      const sd = this.player.animationState.data.skeletonData;
       const find = (n) => sk.bones.find(b => b.data && b.data.name === n);
       this.boneX = find('aim_x');
       this.boneY = find('aim_y');
@@ -94,10 +112,20 @@ class PoseActions {
       if (this.boneY) {
         this.baseY = { x: this.boneY.x, y: this.boneY.y };
       }
-      this.hasAimAxis = !!(this.boneX || this.boneY);
+      this.hasAimBone = !!(this.boneX || this.boneY);
+
+      // 动画回退：aim_x / aim_y 动画驱动整套瞄准偏移
+      const fa = (n) => { try { return sd.findAnimation(n); } catch (e) { return null; } };
+      this.aimAnimX = fa('aim_x');
+      this.aimAnimY = fa('aim_y');
+      this.hasAimAnim = !!(this.aimAnimX || this.aimAnimY);
     } catch (e) {
-      this.hasAimAxis = false;
+      this.hasAimBone = false;
+      this.hasAimAnim = false;
     }
+    // 任一可用即视为支持瞄准
+    this.hasAimAxis = this.hasAimBone || this.hasAimAnim;
+    this.aimMode = this.hasAimBone ? 'bone' : (this.hasAimAnim ? 'anim' : 'none');
   }
 
   /** 当前姿态下可用的动作 */
@@ -292,23 +320,136 @@ class PoseActions {
     try {
       const sk = this.player.skeleton;
       if (!sk) return;
+
+      // ── 模式 A：有同名骨骼（c010 系）—— 直接改坐标，最精确 ──
       const bx = this.boneX, by = this.boneY;
-
-      // 只用 attach 时拍的快照做基准，不用当前值（当前值可能已被别的 hook 污染）
-      const baseX = this._snapX;
-      const baseY = this._snapY;
-      if (!baseX && !baseY) return;
-
-      if (bx && baseX) {
-        bx.x = baseX.x + this.offsetX;
-        bx.y = baseX.y + this.offsetY - this.recoil;
+      if (bx || by) {
+        const baseX = this._snapX;
+        const baseY = this._snapY;
+        if (!baseX && !baseY) return;
+        if (bx && baseX) {
+          bx.x = baseX.x + this.offsetX;
+          bx.y = baseX.y + this.offsetY - this.recoil;
+        }
+        if (by && baseY) {
+          by.x = baseY.x + this.offsetX * 0.4;
+          by.y = baseY.y + this.offsetY * 0.4;
+        }
+        sk.updateWorldTransform();
+        return;
       }
-      if (by && baseY) {
-        by.x = baseY.x + this.offsetX * 0.4;
-        by.y = baseY.y + this.offsetY * 0.4;
+
+      // ── 模式 B：没有同名骨骼（约 71% 角色）──
+      // 用 aim_x / aim_y 动画在 t=0 与 t=duration 的骨骼位移差做线性插值。
+      // 差值在 attach 时采样一次（_aimDeltaX/_aimDeltaY），这里是纯加法。
+      if (!this._aimDeltaX && !this._aimDeltaY) return;
+      const dx = this._aimDeltaX || {};
+      const dy = this._aimDeltaY || {};
+      // ⚠️ offsetX/offsetY 是「已乘 aimRange(=120) 的 skel 单位」，
+      // 不是归一化值。必须先除回 aimRange 才是 -1..1 的插值系数。
+      // 之前直接 clamp(offsetX, -1, 1) 会让任何 |nx|>0.0083 都饱和成 ±1，
+      // 「按鼠标量插值」退化成二值（审核实测 setAim(0.5,..) 与 setAim(1,..) 同幅）。
+      const r = this.aimRange || 120;
+      const t = Math.max(-1, Math.min(1, this.offsetX / r));
+      const u = Math.max(-1, Math.min(1, this.offsetY / r));
+
+      // ⚠️ dx 和 dy 可能有重叠骨骼（审核实测 c011 重叠 21 根）。
+      // 不能「先 applyMap(dx) 再 applyMap(dy)」——后者会直接赋值覆盖前者的贡献。
+      // 正确做法：先把两个动画的位移【累加】到同一张表，再一次性写回骨骼。
+      // recoil 也只加一次（放在最终写入时），不能每张表都加。
+      const delta = {};   // name -> {dx, dy}
+      const add = (map, sx, sy) => {
+        for (const name in map) {
+          const e = delta[name] || (delta[name] = { dx: 0, dy: 0 });
+          e.dx += map[name].dx * sx;
+          e.dy += map[name].dy * sy;
+        }
+      };
+      add(dx, t, u);
+      add(dy, t * 0.4, u * 0.4);
+
+      let applied = 0;
+      for (const name in delta) {
+        const b = sk.findBone ? sk.findBone(name)
+                : sk.bones.find(x => x.data && x.data.name === name);
+        const base = this._aimBase ? this._aimBase[name] : null;
+        if (!b || !base) continue;
+        b.x = base.x + delta[name].dx;
+        b.y = base.y + delta[name].dy - this.recoil * 0.3;
+        applied++;
       }
+      this._appliedBX = applied;
       sk.updateWorldTransform();
     } catch (e) {}
+  }
+
+  /**
+   * 采样 aim_x / aim_y 动画的位移量（模式 B 用）。
+   *
+   * 原理：把动画在 t=0 和 t=duration 应用到骨架上，记录各骨骼的坐标差。
+   * 这个差就是「瞄准到最大偏移」时每根骨骼该移动多少。
+   * 采样后立刻把骨架还原到采样前的状态，不影响正在播放的动画。
+   */
+  _sampleAimDelta() {
+    this._aimDeltaX = null;
+    this._aimDeltaY = null;
+    this._aimBase = null;
+    if (this.boneX || this.boneY) return;      // 模式 A 不需要
+    try {
+      const pl = this.player;
+      const sk = pl.skeleton;
+      const sd = pl.animationState.data.skeletonData;
+
+      // 记录采样前所有骨骼的局部变换
+      const before = {};
+      for (const b of sk.bones) {
+        before[b.data.name] = {
+          x: b.x, y: b.y,
+          rotation: b.rotation, scaleX: b.scaleX, scaleY: b.scaleY,
+        };
+      }
+
+      const sample = (anim) => {
+        if (!anim) return null;
+        const res = {};
+        // ⚠️ blend 参数：0=Setup(重置为该帧绝对值) 1=Current(在当前值上叠加) 2=Multiply
+        // 采样要用 blend=0（拿动画的绝对坐标），否则叠加会失真。
+        const applyAt = (t) => {
+          for (const b of sk.bones) {
+            const b0 = before[b.data.name];
+            b.x = b0.x; b.y = b0.y;
+            b.rotation = b0.rotation; b.scaleX = b0.scaleX; b.scaleY = b0.scaleY;
+          }
+          try { anim.apply(sk, 0, t, false, null, 1, 0, 1); } catch (e) {}
+        };
+        applyAt(0);
+        const t0 = {};
+        for (const b of sk.bones) t0[b.data.name] = { x: b.x, y: b.y };
+        applyAt(anim.duration);
+        for (const b of sk.bones) {
+          const n = b.data.name;
+          const dX = b.x - t0[n].x;
+          const dY = b.y - t0[n].y;
+          if (Math.abs(dX) > 0.5 || Math.abs(dY) > 0.5) {
+            res[n] = { dx: dX, dy: dY };
+          }
+        }
+        return res;
+      };
+
+      const dx = sample(this.aimAnimX);
+      const dy = sample(this.aimAnimY);
+
+      // 还原
+      for (const b of sk.bones) { b.x = before[b.data.name].x; b.y = before[b.data.name].y; }
+
+      this._aimBase = before;
+      this._aimDeltaX = dx && Object.keys(dx).length ? dx : null;
+      this._aimDeltaY = dy && Object.keys(dy).length ? dy : null;
+    } catch (e) {
+      this._aimDeltaX = null;
+      this._aimDeltaY = null;
+    }
   }
 
   /** 立即应用一次（不等下一帧） */

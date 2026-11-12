@@ -59,7 +59,22 @@ class NikkeInteraction {
     await this.loadReactions();
     this.currentId = cid;
     this.currentPose = pose;
+    // 皮肤变体（cNNN_XX）在游戏里共用本体的台词池，但 reactions.json 只
+    // 收录了部分变体。这里做父角色回退：c010_01 → 查 c010。
+    // 实测：231 个无反应的角色里 111 个是这种可继承的变体。
     this.currentCharReactions = this.reactions.characters[cid] || null;
+    this._inheritedFrom = null;
+    if (!this.currentCharReactions) {
+      const mm = /^(c\d{3})_\d{2}$/.exec(cid);
+      if (mm) {
+        const parentId = mm[1];
+        const parent = this.reactions.characters[parentId];
+        if (parent) {
+          this.currentCharReactions = parent;
+          this._inheritedFrom = parentId;
+        }
+      }
+    }
     this.touchCounters = { touch: 0, touch_love: 0 };
     this.clearSoundTimers();
     return this.currentCharReactions;
@@ -189,14 +204,19 @@ class NikkeInteraction {
    * @param {number|null} index 1-based；null = 轮换
    */
   async trigger(kind = 'touch', index = null) {
+    // ⚠️ 无互动数据时不能返回 null —— 调用方会直接读 res.animOk 导致
+    // TypeError: Cannot read properties of null (reading 'animOk')。
+    // 统一返回 {ok:false, reason} 让调用方显式判断。
     if (!this.currentCharReactions) {
-      this.onStatus('该角色无互动配置');
-      return null;
+      this.onStatus('该角色无互动台词');
+      return { ok: false, reason: 'no-data', item: null, variant: null,
+               animOk: false, audio: null };
     }
     const list = this.currentCharReactions[kind];
     if (!list || !list.length) {
-      this.onStatus(`无 ${kind} 反应`);
-      return null;
+      this.onStatus(`该角色无 ${kind} 台词`);
+      return { ok: false, reason: 'no-kind', item: null, variant: null,
+               animOk: false, audio: null };
     }
 
     let item;
@@ -228,7 +248,7 @@ class NikkeInteraction {
 
     const tag = v.fallback_from ? ` ← ${v.fallback_from}` : '';
     this.onStatus(`▶ ${item.reaction_id}  (${animName}${tag})`);
-    return { item, variant: v, animOk, audio };
+    return { ok: true, reason: null, item, variant: v, animOk, audio };
   }
 
   /** 按 SoundEvents 时间轴触发音效（当前仅提示，未接音效资源） */

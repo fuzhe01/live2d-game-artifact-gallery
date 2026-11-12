@@ -2,8 +2,8 @@
 
 为什么不用自建 spine-player 页面：
   spine-player 的 atlas 解析器把 `name (value)` 当特殊语法，
-  NIKKE 有 162 个 atlas 把括号用在 attachment 名里
-  （'add_jarket_l_1_(in)'、'collar_r_(shadow)' 等），
+  NIKKE 有 176 个 atlas 把括号用在 attachment 名里
+  （'add_jarket_l_1_(in)'、'collar_r_(shadow)' 等，实测 2026-11-12），
   自建页面加载会崩。
   而 viewer 页面能正常显示这些角色 —— 说明它走的是另一条路径
   （index.html 里可能是通过 rawDataURIs + 预清洗，或者

@@ -1105,7 +1105,8 @@ let extrasSaved = null;      // 被隐藏的 slot 原始 attachment
  * 注意：
  *   - 不能用 \b（`_` 是单词字符，`\bacc` 匹配不到 `_acc`）
  *   - `prop` 不能带下划线后缀（`bg_prop` 是 prop 结尾，不是 `prop_` 开头）
- *     审核实测：全库 1499 skel 里 `bgobj_` 命中 0，`prop_` 前缀只命中 2 个，
+ *     审核实测（按 manifest 的 pose 计，全库 1497 个 pose）：
+ *     `bgobj_` 命中 0，`prop_` 前缀只命中 2 个，
  *     而 `bg_prop` / `bg_front_prop` 两个主 slot 会被漏掉。
  */
 const EXTRA_SUBSTR = [
@@ -1381,9 +1382,19 @@ function buildSpeedPanel(host){
   host.appendChild(speedPanel);
 
   const closeEl = speedPanel.querySelector('#sp-close');
-  closeEl.onclick = () => speedPanel.classList.remove('on');
+  // ⚠️ 关闭时必须同步清掉入口按钮的 on 高亮，否则面板关了但按钮还亮着
+  // （审核实测：panelOnAfterClose=false 但 btnHighlightAfterClose=true）
+  closeEl.onclick = () => {
+    speedPanel.classList.remove('on');
+    const btn = document.getElementById('ia-speed');
+    if (btn) btn.classList.remove('on');
+  };
   closeEl.onkeydown = (e) => {
-    if(e.key === 'Enter' || e.key === ' ') speedPanel.classList.remove('on');
+    if(e.key === 'Enter' || e.key === ' '){
+      speedPanel.classList.remove('on');
+      const btn = document.getElementById('ia-speed');
+      if (btn) btn.classList.remove('on');
+    }
   };
 
   const range = speedPanel.querySelector('#sp-range');
@@ -1441,9 +1452,18 @@ function buildShotPanel(host){
   host.appendChild(shotPanel);
 
   const closeEl = shotPanel.querySelector('#shot-close');
-  closeEl.onclick = () => shotPanel.classList.remove('on');
+  // 同 sp-close：关闭时同步清入口按钮高亮
+  closeEl.onclick = () => {
+    shotPanel.classList.remove('on');
+    const btn = document.getElementById('ia-shot');
+    if (btn) btn.classList.remove('on');
+  };
   closeEl.onkeydown = (e) => {
-    if(e.key === 'Enter' || e.key === ' ') shotPanel.classList.remove('on');
+    if(e.key === 'Enter' || e.key === ' '){
+      shotPanel.classList.remove('on');
+      const btn = document.getElementById('ia-shot');
+      if (btn) btn.classList.remove('on');
+    }
   };
 
   shotPanel.querySelector('#shot-save').onclick = () => exportScreenshot();
@@ -1549,9 +1569,17 @@ function buildTfPanel(host){
   host.appendChild(tfPanel);
 
   const closeEl = tfPanel.querySelector('#tf-close');
-  closeEl.onclick = () => tfPanel.classList.remove('on');
+  closeEl.onclick = () => {
+    tfPanel.classList.remove('on');
+    const btn = document.getElementById('ia-transform');
+    if (btn) btn.classList.remove('on');
+  };
   closeEl.onkeydown = (e) => {
-    if(e.key === 'Enter' || e.key === ' ') tfPanel.classList.remove('on');
+    if(e.key === 'Enter' || e.key === ' '){
+      tfPanel.classList.remove('on');
+      const btn = document.getElementById('ia-transform');
+      if (btn) btn.classList.remove('on');
+    }
   };
   tfPanel.querySelector('#tf-rot').oninput = (e) =>
     setViewTransform({ rotate: parseInt(e.target.value, 10) });
@@ -2179,8 +2207,13 @@ function setLoading(on, msg, isErr){
 async function loadPose(){
   const tk = ++loadToken;
   const c = manifest.characters[current.idx];
+  // 越界守卫：current.idx 可能因过滤/搜索变化而指向已不存在的条目
+  if (!c) { setLoading(true, '条目不存在', true); return; }
   const info = c.poses[current.pose];
   if(!info){ setLoading(true, '该姿态无资源', true); return; }
+
+  // 切角色/切姿态时清掉上一角色的字幕气泡，否则会残留旧台词
+  if (subtitle) subtitle.hide();
 
   disposePlayer();
   setLoading(true, '加载模型…');

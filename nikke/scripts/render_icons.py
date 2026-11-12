@@ -217,7 +217,9 @@ async def render_all(targets, workers=4):
 
             # ── atlas 预清洗 ────────────────────────────────────────
             # spine-player 的 TextureAtlas 把 `name (value)` 当特殊语法，
-            # NIKKE 有 162 个 atlas 把括号用在 attachment 名里，会崩。
+            # NIKKE 有 176 个 atlas 把括号用在 attachment 名里，会崩
+            # （实测 2026-11-12；注意与「NN/ 前缀 region 名」是两回事，
+            #  后者 13 个且不影响渲染）。
             # 这里把 `xxx(yyy)` → `xxx_yyy`（等长），并同步改 skel 里的字符串。
             atlas_src = os.path.join(C.DATA_DIR, cid, sub, t['atlas']) \
                 if sub else os.path.join(C.DATA_DIR, cid, t['atlas'])
@@ -261,7 +263,7 @@ async def render_all(targets, workers=4):
 
                   // ⚠️ atlas 预处理：
                   // spine-player 的 TextureAtlas 解析器把 `name (value)` 当特殊语法
-                  // （括号内应是 rotate/index 等修饰符）。但 NIKKE 有 162 个 atlas
+                  // （括号内应是 rotate/index 等修饰符）。但 NIKKE 有 176 个 atlas
                   // 把括号用在 attachment 名里（如 'add_jarket_l_1_(in)'、
                   // 'collar_r_(shadow)'），会触发
                   //   pageFields['repeat'] 里 entry[1].indexOf 的空指针

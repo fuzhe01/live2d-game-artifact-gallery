@@ -35,11 +35,30 @@ class VoiceBrowser {
     return this.index;
   }
 
+  /**
+   * 取某角色的语音数据，皮肤变体（cNNN_XX）无数据时回退到本体。
+   *
+   * 实测：201 个变体里 117 个在 voiceIndex.json 里没有条目，
+   * 但它们在游戏里共用本体的语音池（与 interaction.js 的 reactions 回退同理）。
+   * 不回退的话语音面板对 58% 的变体显示「该角色无语音索引」。
+   */
+  _getData(cid) {
+    if (!this.index) return null;
+    const own = this.index[cid];
+    if (own && Object.keys(own).length) return own;
+    const mm = /^(c\d{3})_\d{2}$/.exec(cid || '');
+    if (mm) {
+      const parent = this.index[mm[1]];
+      if (parent && Object.keys(parent).length) return parent;
+    }
+    return null;
+  }
+
   /** 切到某角色；返回该角色分类数 / 语音总数 */
   async setCharacter(cid) {
     await this.load();
     this.charId = cid;
-    const d = this.index[cid] || null;
+    const d = this._getData(cid);
     if (!d) return { categories: 0, clips: 0 };
     let clips = 0;
     for (const k in d) clips += d[k].length;
@@ -86,7 +105,7 @@ class VoiceBrowser {
     if (!this.panel) return;
     const body = this.panel.querySelector('#vb-body');
     const cnt = this.panel.querySelector('#vb-count');
-    const d = this.index && this.index[this.charId];
+    const d = this._getData(this.charId);
 
     if (!d) {
       body.innerHTML = '<div class="vb-empty">该角色无语音索引</div>';
@@ -218,6 +237,9 @@ class VoiceBrowser {
         .find(x => x.title === it.id);
       if (btn) btn.classList.add('playing');
     }
+    // 与 interaction.trigger() 的返回结构对齐：{ok, id, audio}
+    // （审核 D-10：原先无返回值，调用方无法判断是否真的开始播放）
+    return { ok: true, id: it.id, audio: a };
   }
 
   stop() {

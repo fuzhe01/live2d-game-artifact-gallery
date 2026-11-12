@@ -153,12 +153,16 @@ class LipSync {
    *   addAnimation(idle, true, 0.5)  → 459ms  (91.8%)   ← 采用
    *
    * ⚠️ 为什么不用 talk_a / talk_i / talk_u 做循环口型：
-   *   这几个名字在 skel 二进制里【确实存在】（c010 @803275/803788/805747，
-   *   带合法 varint 前缀，payload 269/330/729 字节），
-   *   但 Unity 的 Spine 导入器把它们丢弃了 —— runtime 的
-   *   skeletonData.animations 只有 12 个，不含这三个。
-   *   c010/c011/c080/c381 的 findAnimation('talk_a') 全部返回 null；
-   *   c521/c580 虽有但 duration = 0 或 0.033s（1 帧），无法当循环用。
+   *
+   *   纠正（2026-11-12 审核实测）：这三个动画在 runtime 的
+   *   skeletonData.animations 里【都存在】，不是被导入器丢弃。
+   *   findAnimation('talk_a') 返回的是对象而非 null。
+   *
+   *   真正的问题是【duration 几乎为 0】：
+   *     c010 / c011 / c080  → talk_a / talk_i / talk_u 的 duration = 0
+   *     c381                → duration = 0.033s（1 帧 @30fps）
+   *   duration=0 的动画不能循环播放（除零 / 立即结束），
+   *   0.033s 的每帧都抖动，都不适合当口型循环。
    *   所以只能接受 talk_start/talk_end 单帧的覆盖率上限。
    */
   _playTalk(talking) {

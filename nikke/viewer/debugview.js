@@ -59,7 +59,9 @@ class DebugView {
    * 所有字段被写成 undefined —— 手动设的 true 会在下一帧被抹掉，
    * 画面零变化（实测像素变化 nz=0）。
    *
-   * 正确做法：改 player.config.debug。改完读回时保持 true，实测像素变化 1.972%。
+   * 正确做法：改 player.config.debug。改完读回时保持 true
+   * （审核独立复测像素变化 4.174%，此前记录的 1.972% 是不同视口/角色下的测量值，
+   *   机制本身有效：关闭后像素差为 0.0%）。
    *
    * 例外：drawSkeletonXY 不在 config.debug 的覆盖列表里（vendor 只处理 7 个键），
    * 这个必须直接改 skeletonDebugRenderer，且不会被覆写。
