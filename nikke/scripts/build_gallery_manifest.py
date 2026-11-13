@@ -57,6 +57,13 @@ def pretty_scene(name):
     return ' '.join(out)
 
 
+# scenariobackground 包里混入的非场景资源（审核实测）：
+#   纯色演出遮罩：black/none/opacity_60/red/white（900×900，约 1.5 KB，无观赏价值）
+#   剧情道具图：  diary/letter/underwear（尺寸不等，归入「剧情道具」组）
+SCENERY_EXCLUDE = {'black', 'none', 'opacity_60', 'red', 'white'}
+PROP_NAMES = {'diary', 'letter', 'underwear'}
+
+
 def group_of(name):
     """从资源名推分组：
        eventscene_absolute_01_1     → absolute
@@ -64,9 +71,16 @@ def group_of(name):
        eventscene_chap_49_01_1       → chap_49      （保留章号）
        eventscene_side_01_02         → side_01      （保留支线号）
        eventscene_main_02_01         → main_02
-       非 eventscene（纯场景背景）    → scenery（统一一组）
+       非 eventscene 的纯场景背景    → scenery（统一一组）
+       纯色遮罩                      → None（剔除，不进 Gallery）
+       剧情道具                      → props
     """
     if not re.match(r'^eventscene_', name, re.I):
+        low = name.lower()
+        if low in SCENERY_EXCLUDE:
+            return None
+        if low in PROP_NAMES:
+            return 'props'
         return 'scenery'
     m = re.match(r'^eventscene_(.+)$', name, re.I)
     rest = m.group(1) if m else name
@@ -124,12 +138,19 @@ def main():
     print('已有尺寸信息: %d 条' % len(meta))
 
     items = []
+    excluded = 0
     for f in files:
         name = f[:-5]                      # 去 .webp
         g = group_of(name)
+        if g is None:                      # 纯色演出遮罩，不进 Gallery
+            excluded += 1
+            continue
         # 分组标题：scenery 统一叫「场景背景」，但每张图要显示自己的场景名
         if g == 'scenery':
             gtitle = '场景背景'
+            ititle = pretty_scene(name)
+        elif g == 'props':
+            gtitle = '剧情道具'
             ititle = pretty_scene(name)
         else:
             gtitle = title_of(g, titles)
@@ -174,6 +195,9 @@ def main():
     print()
     print('manifest: %d 张 / %d 组 / %.1f MB' % (
         len(items), len(groups), total / 1024**2))
+    if excluded:
+        print('  已排除纯色演出遮罩 %d 张（black/none/opacity_60/red/white，磁盘保留）'
+              % excluded)
     print('  组规模前 12:')
     for g in sorted(groups, key=lambda x: -x['count'])[:12]:
         print('    %-28s %3d 张  %s' % (g['id'], g['count'], g['title']))
