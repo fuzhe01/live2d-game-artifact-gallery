@@ -39,13 +39,15 @@
 - **占位资源**：c967/c968/c969 贴图全黑、c999 是游戏内置灰色 dummy 人偶，
   列表用占位图标标注「资源未实装 / 游戏内置测试模型」。
 - **🖼 Gallery 剧情插画（2026-11-13 新增）**：
-  从游戏客户端直接解包 `scenariobackground(hd)_assets_eventscene_*.bundle`，
-  **1709 张原图** → WebP q88（1001.9 MB，label 共 130 组）：
-  1237 张剧情/活动插画（ventscene_*，按活动分 129 组）+ 472 张纯场景背景
-  （rk/ltar/ircraft_inside 等，统一归「场景背景」一组）。
-  尺寸：约 1000 张 2048×2048，其余为游戏源尺寸（1024²/900² 等）。
+  从游戏客户端直接解包 `scenariobackground(hd)_assets_*`（1709 个 bundle），
+  输出 **1704 张** WebP q88（1001.9 MB，131 组）：
+  - 1237 张剧情/活动插画（`eventscene_*`，按活动分 129 组）
+  - 464 张纯场景背景（`ark`/`altar`/`aircraft_inside`，归「场景背景」组）
+  - 3 张剧情道具（`diary`/`letter`/`underwear`，归「剧情道具」组）
+  - 剔除 5 张纯色演出遮罩（`black`/`white`/`red`/`none`/`opacity_60`，磁盘保留）
+  尺寸：1347 张 2048×2048，292 张 1024²，53 张 900²，其余为个别源尺寸。
   覆盖 nikke-db gallery 的 eventscene 部分，不含相册封面、四格漫画等非 eventscene 内容。
-  导航新增独立「🖼 Gallery」视图，按活动分 **129 组**
+  导航新增独立「🖼 Gallery」视图，共 **131 组**
   （Chapter 50 82 张 / Goddess Fall 64 / Old Tales 53 …），
   支持搜索、分组筛选、滚动加载、点击看大图与下载。
   重建：`python nikke/scripts/extract_all_bg.py` +

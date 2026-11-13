@@ -162,9 +162,18 @@ def main():
             'groupTitle': gtitle,
             'title': ititle,
         }
-        if name in meta:
+        if name in meta and meta[name].get('w'):
             it['w'] = meta[name].get('w')
             it['h'] = meta[name].get('h')
+        else:
+            # 提取脚本的 manifest 只覆盖「最后一次运行」的批次，
+            # 早批次（如 1237 张 eventscene）会缺尺寸 —— 用 Pillow 读实际尺寸补上。
+            try:
+                from PIL import Image
+                with Image.open(os.path.join(SRC, f)) as im:
+                    it['w'], it['h'] = im.size
+            except Exception:
+                pass
         it['bytes'] = os.path.getsize(os.path.join(SRC, f))
         items.append(it)
 
