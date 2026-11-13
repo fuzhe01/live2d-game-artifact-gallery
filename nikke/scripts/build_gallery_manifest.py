@@ -109,11 +109,19 @@ def main():
     for f in files:
         name = f[:-5]                      # 去 .webp
         g = group_of(name)
+        # 分组标题：scenery 统一叫「场景背景」，但每张图要显示自己的场景名
+        if g == 'scenery':
+            gtitle = '场景背景'
+            ititle = ' '.join(w.capitalize() for w in re.split(r'[_-]+', name) if w)
+        else:
+            gtitle = title_of(g, titles)
+            ititle = gtitle
         it = {
             'name': name,
             'file': f,
             'group': g,
-            'title': title_of(g, titles),
+            'groupTitle': gtitle,
+            'title': ititle,
         }
         if name in meta:
             it['w'] = meta[name].get('w')
@@ -124,9 +132,10 @@ def main():
     # 分组汇总
     from collections import Counter
     cnt = Counter(x['group'] for x in items)
+    gtitle = {x['group']: x['groupTitle'] for x in items}
     groups = []
     for g, n in sorted(cnt.items()):
-        groups.append({'id': g, 'title': title_of(g, titles), 'count': n})
+        groups.append({'id': g, 'title': gtitle.get(g, g), 'count': n})
 
     os.makedirs(DST, exist_ok=True)
     # 复制图片

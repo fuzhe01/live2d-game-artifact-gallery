@@ -40,7 +40,11 @@
   列表用占位图标标注「资源未实装 / 游戏内置测试模型」。
 - **🖼 Gallery 剧情插画（2026-11-13 新增）**：
   从游戏客户端直接解包 `scenariobackground(hd)_assets_eventscene_*.bundle`，
-  **1237 张原图**（946 张 2048×2048，其余 291 张为游戏源尺寸 1024²/900² 等）→ WebP q88（761.9 MB）。覆盖 nikke-db gallery 的 eventscene 部分（游戏内剧情/活动插画），不含相册封面、四格漫画等非 eventscene 内容。
+  **1709 张原图** → WebP q88（1001.9 MB，label 共 130 组）：
+  1237 张剧情/活动插画（ventscene_*，按活动分 129 组）+ 472 张纯场景背景
+  （rk/ltar/ircraft_inside 等，统一归「场景背景」一组）。
+  尺寸：约 1000 张 2048×2048，其余为游戏源尺寸（1024²/900² 等）。
+  覆盖 nikke-db gallery 的 eventscene 部分，不含相册封面、四格漫画等非 eventscene 内容。
   导航新增独立「🖼 Gallery」视图，按活动分 **129 组**
   （Chapter 50 82 张 / Goddess Fall 64 / Old Tales 53 …），
   支持搜索、分组筛选、滚动加载、点击看大图与下载。
