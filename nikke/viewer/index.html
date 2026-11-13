@@ -2696,7 +2696,7 @@ async function renderGallery(){
       ? data.groups
       : [...new Set(data.items.map(x => x.group || '其它'))]
           .sort().map(g => ({id:g, title:g, count:data.items.filter(x => (x.group||'其它')===g).length}));
-    gsel.innerHTML = `<option value="">全部活动 (${groups.length})</option>` +
+    gsel.innerHTML = `<option value="">全部 (${groups.length} 组)</option>` +
       groups.map(g => `<option value="${g.id}">${g.title} (${g.count})</option>`).join('');
     gsel.onchange = () => renderGallery();
   }

@@ -29,7 +29,7 @@ def collect_targets():
         cons[pak] = open_catalog(pak)
         rows = cons[pak].execute(
             "SELECT file_id, key FROM files_chunktype "
-            "WHERE key LIKE 'scenariobackground(hd)_assets_eventscene_%'").fetchall()
+            "WHERE key LIKE 'scenariobackground(hd)_assets_%'").fetchall()
         for fid, key in rows:
             import re
             m = re.match(r'^scenariobackground\(hd\)_assets_(.+?)_[0-9a-f]{32}\.bundle$',
@@ -88,7 +88,16 @@ def main():
     items = sorted(targets.items())
     if limit:
         items = items[:limit]
-    print('本次处理: %d' % len(items))
+    # 断点续传：已导出且非空的跳过
+    before = len(items)
+    items = [(n, v) for n, v in items
+             if not (os.path.exists(os.path.join(OUT, n + '.webp'))
+                     and os.path.getsize(os.path.join(OUT, n + '.webp')) > 1024)]
+    print('目标总数 %d，已完成 %d，本次处理 %d' % (
+        before, before - len(items), len(items)))
+    if not items:
+        print('✅ 全部已提取，无需补抓')
+        return
 
     manifest = []
     ok = 0

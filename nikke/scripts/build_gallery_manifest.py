@@ -40,13 +40,16 @@ def norm(s):
 
 
 def group_of(name):
-    """从插画名推活动组：
+    """从资源名推分组：
        eventscene_absolute_01_1     → absolute
        eventscene_arkguardian_01     → arkguardian
        eventscene_chap_49_01_1       → chap_49      （保留章号）
        eventscene_side_01_02         → side_01      （保留支线号）
        eventscene_main_02_01         → main_02
+       非 eventscene（纯场景背景）    → scenery（统一一组）
     """
+    if not re.match(r'^eventscene_', name, re.I):
+        return 'scenery'
     m = re.match(r'^eventscene_(.+)$', name, re.I)
     rest = m.group(1) if m else name
     # 章节/支线/主线：保留「前缀_编号」两段，去掉其后的图序号
@@ -62,6 +65,9 @@ def group_of(name):
 def title_of(group, titles):
     """组名 → 展示标题：先查 nikke-db，再按规则美化"""
     g = group.lower()
+    # 纯场景背景统一一组
+    if g == 'scenery':
+        return '场景背景'
     if g in titles:
         return titles[g]
     # 规范化匹配（ark_guardian ↔ arkguardian）
