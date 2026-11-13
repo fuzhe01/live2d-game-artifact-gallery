@@ -39,6 +39,24 @@ def norm(s):
     return re.sub(r'[^a-z0-9]', '', (s or '').lower())
 
 
+def pretty_scene(name):
+    """场景名美化：
+       aircraft_inside → Aircraft Inside
+       aaawunder_2     → Aaawunder 2
+       arkgate_far_d   → Arkgate Far d     （单字母后缀保持原样）
+       2025foolsday    → 2025 Foolsday     （数字前缀后加空格）
+    """
+    s = re.sub(r'^(\d+)(?=[A-Za-z])', r'\1 ', name)
+    parts = [p for p in re.split(r'[_\-\s]+', s) if p]
+    out = []
+    for p in parts:
+        if len(p) == 1 or p.isdigit():
+            out.append(p)
+        else:
+            out.append(p.capitalize())
+    return ' '.join(out)
+
+
 def group_of(name):
     """从资源名推分组：
        eventscene_absolute_01_1     → absolute
@@ -112,7 +130,7 @@ def main():
         # 分组标题：scenery 统一叫「场景背景」，但每张图要显示自己的场景名
         if g == 'scenery':
             gtitle = '场景背景'
-            ititle = ' '.join(w.capitalize() for w in re.split(r'[_-]+', name) if w)
+            ititle = pretty_scene(name)
         else:
             gtitle = title_of(g, titles)
             ititle = gtitle
